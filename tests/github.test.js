@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadBoard, loadComments, normalizeIssue, parseExpiry, AuthError, ApiError } from '../src/github.js';
+import { loadBoard, loadComments, newTokenUrl, normalizeIssue, parseExpiry, AuthError, ApiError } from '../src/github.js';
 
 const TOKEN = 'github_pat_TEST_ONLY_0000';
 const node = (number, extra = {}) => ({
@@ -136,4 +136,13 @@ test('cited issues: out-of-range numbers dropped, apres first, errors warned', a
   assert.doesNotMatch(q, /99999999999/);
   assert.equal(r.states.get(3), 'OPEN');
   assert.equal(r.warnings.length, 1);
+});
+
+test('newTokenUrl pre-fills the fine-grained token form', () => {
+  const url = new URL(newTokenUrl());
+  assert.equal(url.origin + url.pathname, 'https://github.com/settings/personal-access-tokens/new');
+  assert.deepEqual(Object.fromEntries(url.searchParams), {
+    name: 'Ourdia suivi', description: 'Lecture des issues de bhugot/ourdia pour Ourdia Project Manager',
+    target_name: 'bhugot', expires_in: '366', issues: 'read', contents: 'read',
+  });
 });

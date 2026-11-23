@@ -146,3 +146,12 @@ export function parseExpiry(value) {
   const m = (value || '').match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}) UTC$/);
   return m ? new Date(`${m[1]}T${m[2]}Z`) : null;
 }
+
+/** Link to GitHub's fine-grained token form, pre-filled (the repository is still picked by hand). */
+export function newTokenUrl() {
+  const params = new URLSearchParams({
+    name: 'Ourdia suivi', description: `Lecture des issues de ${OWNER}/${REPO} pour Ourdia Project Manager`,
+    target_name: OWNER, expires_in: '366', issues: 'read', contents: 'read',
+  });
+  return `https://github.com/settings/personal-access-tokens/new?${params}`;
+}

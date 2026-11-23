@@ -1,34 +1,51 @@
-// Token settings: paste once, kept in this phone's localStorage.
+// Token settings: create it from a pre-filled GitHub form, paste once, kept in this phone's localStorage.
 import { h } from '../dom.js';
 import { longDate } from '../format.js';
-import { parseExpiry } from '../github.js';
-
-const NEW_TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new';
+import { newTokenUrl, parseExpiry } from '../github.js';
 
 export function settingsView(ctx) {
   const { doc } = ctx;
   const input = h(doc, 'input', { type: 'password', id: 'token', name: 'token', autocomplete: 'off', spellcheck: 'false',
     placeholder: 'github_pat_…' });
-  const save = h(doc, 'button', { type: 'button', class: 'primary' }, 'Enregistrer');
+  const status = h(doc, 'p', { class: 'muted', role: 'status' });
+  const paste = h(doc, 'button', { type: 'button', class: 'primary' }, 'Coller le jeton et enregistrer');
+  const save = h(doc, 'button', { type: 'button' }, 'Enregistrer');
   const forget = h(doc, 'button', { type: 'button' }, 'Oublier le jeton');
-  save.addEventListener('click', () => { if (input.value.trim()) ctx.saveToken(input.value.trim()); });
+  const store = value => {
+    const token = (value || '').trim();
+    if (!/^(github_pat_|ghp_)\w+$/.test(token)) { status.textContent = 'Ce n\'est pas un jeton GitHub (il commence par github_pat_).'; return; }
+    ctx.saveToken(token);
+  };
+  paste.addEventListener('click', async () => {
+    try {
+      store(await navigator.clipboard.readText());
+    } catch {
+      status.textContent = 'Lecture du presse-papiers refusée : colle le jeton dans le champ puis Enregistrer.';
+      input.focus();
+    }
+  });
+  save.addEventListener('click', () => store(input.value));
   forget.addEventListener('click', () => ctx.forgetToken());
   const expiry = parseExpiry(ctx.board?.tokenExpiry);
 
   return h(doc, 'div', { class: 'view view-settings' },
     h(doc, 'header', { class: 'top' }, ctx.hasToken ? h(doc, 'a', { class: 'back', href: '#/' }, '← Liste') : h(doc, 'h1', null, 'Ourdia')),
     h(doc, 'h1', null, 'Réglages'),
-    ctx.authError ? h(doc, 'p', { class: 'banner warn' }, 'Jeton refusé par GitHub : colle un nouveau jeton.') : null,
+    ctx.authError ? h(doc, 'p', { class: 'banner warn' }, 'Jeton refusé par GitHub : crée un nouveau jeton.') : null,
     h(doc, 'p', null, ctx.hasToken ? 'Un jeton est enregistré sur ce téléphone.' : 'Aucun jeton enregistré sur ce téléphone.',
       expiry ? ` Il expire le ${longDate(expiry)}.` : ''),
-    h(doc, 'label', { for: 'token' }, 'Jeton GitHub (fine-grained)'),
+    h(doc, 'h2', null, 'Une fois par an'),
+    h(doc, 'ol', { class: 'steps' },
+      h(doc, 'li', null, h(doc, 'a', { href: newTokenUrl(), rel: 'noopener noreferrer', target: '_blank' }, 'Ouvrir le formulaire GitHub prérempli ↗'),
+        ' (nom, durée d\'un an, Issues et Contents en lecture).'),
+      h(doc, 'li', null, 'Dans « Repository access », choisir ', h(doc, 'strong', null, 'Only select repositories → ourdia'), '.'),
+      h(doc, 'li', null, '« Generate token », puis copier le jeton.'),
+      h(doc, 'li', null, 'Revenir ici et toucher le bouton ci-dessous.')),
+    h(doc, 'div', { class: 'actions' }, paste),
+    status,
+    h(doc, 'label', { for: 'token' }, 'Ou coller le jeton à la main'),
     input,
     h(doc, 'div', { class: 'actions' }, save, ctx.hasToken ? forget : null),
-    h(doc, 'h2', null, 'Créer le jeton'),
-    h(doc, 'ol', null,
-      h(doc, 'li', null, h(doc, 'a', { href: NEW_TOKEN_URL, rel: 'noopener noreferrer', target: '_blank' }, 'Nouveau jeton fine-grained ↗')),
-      h(doc, 'li', null, 'Repository access : Only select repositories → bhugot/ourdia.'),
-      h(doc, 'li', null, 'Permissions du dépôt : Issues en lecture, Contents en lecture (Metadata en lecture est imposée).'),
-      h(doc, 'li', null, 'Copier le jeton et le coller ici. Il reste sur ce téléphone et ne part que vers api.github.com.')),
+    h(doc, 'p', { class: 'muted' }, 'Le jeton reste sur ce téléphone et ne part que vers api.github.com.'),
     h(doc, 'p', null, h(doc, 'a', { href: '#/demo' }, 'Voir le mode démo (données inventées)')));
 }
