@@ -24,6 +24,7 @@ Ben pilote le MMO Ourdia par des issues GitHub de `bhugot/ourdia` (dépôt **pri
 ## Anti-objectifs (échec même si ça « marche »)
 
 - Le jeton fuit : script tiers, jeton dans une URL, dans un log, ou envoyé ailleurs qu'à `api.github.com`.
+- Le jeton est lu par une autre page de la même origine : `https://bhugot.github.io` est partagée par toutes les pages Pages de `bhugot` ; aucune d'elles ne doit charger de script tiers (sinon, domaine dédié). _Ajouté après la relecture du 24/11._
 - Un commentaire d'issue exécute du code dans la page (XSS) ou charge une ressource externe (image de pistage).
 - L'app et #43 classent une issue différemment sans que ce soit voulu.
 
