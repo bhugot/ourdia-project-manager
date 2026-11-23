@@ -14,6 +14,10 @@ export class AuthError extends Error {
 export class ApiError extends Error {
   constructor(message, status = null) { super(message); this.name = 'ApiError'; this.status = status; }
 }
+/** The token may read but not write (403), or the target is missing (404). */
+export class WriteError extends ApiError {
+  constructor(status) { super('Ce jeton ne peut pas écrire dans les issues', status); this.name = 'WriteError'; }
+}
 
 const fields = withSubIssues => `number title body state createdAt updatedAt closedAt
   labels(first: 30) { nodes { name } } assignees(first: 10) { nodes { login } }
@@ -150,8 +154,27 @@ export function parseExpiry(value) {
 /** Link to GitHub's fine-grained token form, pre-filled (the repository is still picked by hand). */
 export function newTokenUrl() {
   const params = new URLSearchParams({
-    name: 'Ourdia suivi', description: `Lecture des issues de ${OWNER}/${REPO} pour Ourdia Project Manager`,
-    target_name: OWNER, expires_in: '366', issues: 'read', contents: 'read',
+    name: 'Ourdia suivi', description: `Suivi des issues de ${OWNER}/${REPO} pour Ourdia Project Manager`,
+    target_name: OWNER, expires_in: '366', issues: 'write', contents: 'read',
   });
   return `https://github.com/settings/personal-access-tokens/new?${params}`;
 }
+
+async function write(token, fetchFn, method, path, payload) {
+  const res = await fetchFn(`${API}/repos/${OWNER}/${REPO}/${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json',
+      ...(payload ? { 'Content-Type': 'application/json' } : {}) },
+    ...(payload ? { body: JSON.stringify(payload) } : {}),
+  });
+  if (res.status === 401) throw new AuthError();
+  if (res.status === 403 || res.status === 404) throw new WriteError(res.status);
+  if (!res.ok) throw new ApiError(`GitHub a répondu ${res.status}`, res.status);
+}
+
+export const postComment = (token, number, body, fetchFn = fetch) =>
+  write(token, fetchFn, 'POST', `issues/${number}/comments`, { body });
+export const addLabel = (token, number, label, fetchFn = fetch) =>
+  write(token, fetchFn, 'POST', `issues/${number}/labels`, { labels: [label] });
+export const removeLabel = (token, number, label, fetchFn = fetch) =>
+  write(token, fetchFn, 'DELETE', `issues/${number}/labels/${encodeURIComponent(label)}`);

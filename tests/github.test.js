@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadBoard, loadComments, newTokenUrl, normalizeIssue, parseExpiry, AuthError, ApiError } from '../src/github.js';
+import { loadBoard, loadComments, newTokenUrl, normalizeIssue, parseExpiry, postComment, addLabel, removeLabel, AuthError, ApiError, WriteError } from '../src/github.js';
 
 const TOKEN = 'github_pat_TEST_ONLY_0000';
 const node = (number, extra = {}) => ({
@@ -142,7 +142,31 @@ test('newTokenUrl pre-fills the fine-grained token form', () => {
   const url = new URL(newTokenUrl());
   assert.equal(url.origin + url.pathname, 'https://github.com/settings/personal-access-tokens/new');
   assert.deepEqual(Object.fromEntries(url.searchParams), {
-    name: 'Ourdia suivi', description: 'Lecture des issues de bhugot/ourdia pour Ourdia Project Manager',
-    target_name: 'bhugot', expires_in: '366', issues: 'read', contents: 'read',
+    name: 'Ourdia suivi', description: 'Suivi des issues de bhugot/ourdia pour Ourdia Project Manager',
+    target_name: 'bhugot', expires_in: '366', issues: 'write', contents: 'read',
   });
+});
+
+test('writes: comment and labels through REST', async () => {
+  const f = fakeFetch([{ status: 201, json: {} }, { json: [] }, { json: [] }]);
+  await postComment(TOKEN, 12, '## Réponses de Ben\n\nQ1 : A\n', f);
+  await addLabel(TOKEN, 12, 'stand-by', f);
+  await removeLabel(TOKEN, 12, 'stand-by', f);
+  assert.deepEqual(f.calls.map(c => [c.init.method, c.url]), [
+    ['POST', 'https://api.github.com/repos/bhugot/ourdia/issues/12/comments'],
+    ['POST', 'https://api.github.com/repos/bhugot/ourdia/issues/12/labels'],
+    ['DELETE', 'https://api.github.com/repos/bhugot/ourdia/issues/12/labels/stand-by'],
+  ]);
+  assert.deepEqual(JSON.parse(f.calls[0].init.body), { body: '## Réponses de Ben\n\nQ1 : A\n' });
+  assert.deepEqual(JSON.parse(f.calls[1].init.body), { labels: ['stand-by'] });
+  for (const c of f.calls) {
+    assert.equal(c.init.headers.Authorization, `Bearer ${TOKEN}`);
+    assert.equal(c.init.headers.Accept, 'application/vnd.github+json');
+  }
+});
+
+test('writes: 403 is a WriteError, 401 an AuthError', async () => {
+  await assert.rejects(postComment(TOKEN, 1, 'x', fakeFetch([{ status: 403, json: {} }])), WriteError);
+  await assert.rejects(addLabel(TOKEN, 1, 'stand-by', fakeFetch([{ status: 404, json: {} }])), WriteError);
+  await assert.rejects(removeLabel(TOKEN, 1, 'stand-by', fakeFetch([{ status: 401, json: {} }])), AuthError);
 });
