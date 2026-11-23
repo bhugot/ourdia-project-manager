@@ -6,6 +6,7 @@ export const OWNER = 'bhugot';
 export const REPO = 'ourdia';
 const API = 'https://api.github.com';
 const MAX_CITED = 100;
+const MAX_ISSUE_NUMBER = 2 ** 31 - 1; // GraphQL Int
 
 export class AuthError extends Error {
   constructor() { super('Jeton refusé'); this.name = 'AuthError'; }
@@ -102,25 +103,26 @@ export async function loadBoard(token, fetchFn = fetch) {
     else if (repo.ref === null) warnings.push('Branche pilotage lue par l\'API REST (GraphQL refusé).');
   }
 
-  const { states, refs } = await loadCited(token, fetchFn, issues);
+  const { states, refs } = await loadCited(token, fetchFn, issues, warnings);
   return { issues, states, refs, pilotageDate, warnings, tokenExpiry: first.expiry };
 }
 
-async function loadCited(token, fetchFn, issues) {
+async function loadCited(token, fetchFn, issues, warnings) {
   const loaded = new Set(issues.map(i => i.number));
   const cited = new Set();
-  for (const i of issues) {
-    for (const n of [...parseAfter(i.body), ...i.subIssues, ...(i.parent ? [i.parent] : []),
-      ...mentions(i.body), ...i.comments.flatMap(c => mentions(c.body))]) {
-      if (!loaded.has(n)) cited.add(n);
-    }
+  // Dependencies first, so the MAX_CITED cut only ever drops plain mentions.
+  const structural = issues.flatMap(i => [...parseAfter(i.body), ...i.subIssues, ...(i.parent ? [i.parent] : [])]);
+  const mentioned = issues.flatMap(i => [...mentions(i.body), ...i.comments.flatMap(c => mentions(c.body))]);
+  for (const n of [...structural, ...mentioned]) {
+    if (!loaded.has(n) && n > 0 && n <= MAX_ISSUE_NUMBER) cited.add(n);
   }
   const states = new Map();
   const refs = new Map();
   const numbers = [...cited].slice(0, MAX_CITED);
   if (!numbers.length) return { states, refs };
   const aliases = numbers.map(n => `i${n}: issue(number: ${n}) { number title state }`).join('\n');
-  const { data } = await graphql(token, fetchFn, `query { repository(owner: "${OWNER}", name: "${REPO}") { ${aliases} } }`);
+  const { data, errors } = await graphql(token, fetchFn, `query { repository(owner: "${OWNER}", name: "${REPO}") { ${aliases} } }`);
+  if (errors.length) warnings.push('Certaines issues citées sont introuvables (supprimées, pull requests ou numéros erronés).');
   for (const ref of Object.values(data?.repository || {})) {
     if (!ref) continue;
     states.set(ref.number, ref.state);

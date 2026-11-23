@@ -14,3 +14,7 @@ Page statique (GitHub Pages) pour suivre depuis le téléphone les issues et les
 - **Ce dépôt est public, celui du jeu est privé** : données de test inventées, aucun contenu réel d'issue copié ici.
 - Interface et documents en français ; code et identifiants en anglais.
 - Tests : `npm test` (`node --test`, sans dépendance), vert avant chaque push. Relecture par une session neuve avant de pousser (règle du workspace).
+
+## Origine partagée (relecture du 24/11)
+
+Le jeton vit dans le `localStorage` de l'origine `https://bhugot.github.io`, partagée par **toutes** les pages GitHub Pages des dépôts de `bhugot`. Tant que l'app y est servie : aucun autre site Pages de `bhugot` ne charge de script tiers ni de code non relu. Si un tel site doit exister, passer d'abord l'app sur un domaine personnalisé dédié.

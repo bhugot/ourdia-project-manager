@@ -68,7 +68,10 @@ function context(r) {
       issue.loading = true;
       loadComments(token(), issue.number)
         .then(comments => { issue.comments = comments; issue.commentsComplete = true; })
-        .catch(() => { issue.commentsComplete = true; })
+        .catch(e => {
+          if (e instanceof AuthError) { authError = true; location.hash = '#/settings'; }
+          else issue.commentsError = e.message;
+        })
         .finally(() => { issue.loading = false; render(); });
     },
   };

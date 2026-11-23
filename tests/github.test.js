@@ -123,3 +123,17 @@ test('parseExpiry', () => {
   assert.equal(parseExpiry(null), null);
   assert.equal(parseExpiry('n/a'), null);
 });
+
+test('cited issues: out-of-range numbers dropped, apres first, errors warned', async () => {
+  const many = Array.from({ length: 120 }, (_, k) => `#${1000 + k}`).join(' ');
+  const f = fakeFetch([
+    { json: board({ open: { pageInfo: { hasNextPage: false }, nodes: [node(5, { body: `voir ${many} #99999999999` }), node(6, { body: 'apres: #3' })] } }) },
+    { json: { data: { repository: { i3: { number: 3, title: 'Trois', state: 'OPEN' } } }, errors: [{ message: 'Could not resolve to an Issue with the number of 1001.' }] } },
+  ]);
+  const r = await loadBoard(TOKEN, f);
+  const q = f.calls[1].init.body;
+  assert.match(q, /i3: issue\(number: 3\)/);
+  assert.doesNotMatch(q, /99999999999/);
+  assert.equal(r.states.get(3), 'OPEN');
+  assert.equal(r.warnings.length, 1);
+});

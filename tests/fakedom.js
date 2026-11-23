@@ -8,6 +8,7 @@ export function fakeDocument() {
     createElement(tag) {
       const el = node({ nodeType: 1, tagName: tag.toUpperCase(), attributes: {} });
       el.setAttribute = (k, v) => { el.attributes[k] = String(v); };
+      el.addEventListener = () => {};
       Object.defineProperty(el, 'textContent', { get: () => text(el), set: v => { el.children = [doc.createTextNode(v)]; } });
       created.push(el);
       return el;

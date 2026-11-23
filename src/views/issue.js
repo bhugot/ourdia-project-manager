@@ -60,6 +60,9 @@ function deps(ctx, issue) {
 
 function notes(ctx, issue) {
   const { doc } = ctx;
+  if (issue.commentsError) {
+    return block(doc, 'Points d\'étape', h(doc, 'p', { class: 'banner warn' }, `Commentaires illisibles : ${issue.commentsError}`));
+  }
   if (!issue.commentsComplete) {
     ctx.loadComments(issue);
     return block(doc, 'Points d\'étape', h(doc, 'p', { class: 'muted' }, 'chargement…'));
