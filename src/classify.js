@@ -9,9 +9,10 @@ export const CLOUD_LABELS = ['cloud', 'cloud-plus', 'cloud-fort']; // weakest to
 export const MODELS = { cloud: 'Sonnet', 'cloud-plus': 'Opus', 'cloud-fort': 'Fable' };
 export const TAKEN_LABEL = 'en-cours';
 export const BOARD_LABEL = 'tableau-de-bord';
+export const STANDBY_LABEL = 'stand-by';
 export const SECTIONS = [
   ['waiting', 'À trancher'], ['blocked', 'Bloqué'], ['running', 'En cours'],
-  ['queued', 'En file'], ['done', 'Fini depuis 24 h'], ['other', 'Autres'],
+  ['queued', 'En file'], ['done', 'Fini depuis 24 h'], ['other', 'Autres'], ['standby', 'En stand-by'],
 ];
 
 const HOUR = 3600 * 1000;
@@ -65,6 +66,10 @@ export function classify(issues, { now, states, pilotageDate }) {
     .sort((a, b) => b.number - a.number);
   for (const issue of open) {
     const labels = issue.labels;
+    if (labels.includes(STANDBY_LABEL)) {
+      out.standby.push(card(issue, ''));
+      continue;
+    }
     if (labels.includes('attente-ben')) {
       out.waiting.push(card(issue, waitingDetail(issue)));
       continue;

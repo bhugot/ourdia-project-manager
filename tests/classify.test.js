@@ -18,7 +18,7 @@ const run = (issues, opts = {}) => classify(issues, { now: NOW, states: new Map(
 const detailOf = (cards, n) => cards.find(x => x.number === n)?.detail;
 
 test('SECTIONS order and titles', () => {
-  assert.deepEqual(SECTIONS.map(s => s[0]), ['waiting', 'blocked', 'running', 'queued', 'done', 'other']);
+  assert.deepEqual(SECTIONS.map(s => s[0]), ['waiting', 'blocked', 'running', 'queued', 'done', 'other', 'standby']);
 });
 
 test('waiting lists pending questions, then answers received', () => {
@@ -99,4 +99,13 @@ test('pc idle when pilotage queued and last commit older than 2 h', () => {
 test('cards carry session links, oldest first', () => {
   const r = run([mk(20, ['cloud'], { assigned: true, comments: [c('Prise — session : https://claude.ai/code/session_X1', { minutes: 5 })] })]);
   assert.deepEqual(r.running[0].sessions, ['https://claude.ai/code/session_X1']);
+});
+
+test('stand-by issues go only to the standby section', () => {
+  const r = run([
+    mk(12, ['attente-ben', 'stand-by'], { comments: [c(ASK, { hours: 2 })] }),
+    mk(20, ['cloud', 'stand-by'], { assigned: true, comments: [c('x', { minutes: 5 })] }),
+  ]);
+  assert.deepEqual(r.standby.map(x => [x.number, x.detail]), [[20, ''], [12, '']]);
+  for (const [key] of SECTIONS) if (key !== 'standby') assert.equal(r[key].length, 0, key);
 });
