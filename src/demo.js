@@ -17,7 +17,9 @@ Change le rythme des quêtes saisonnières.
 - **B.** Autre (préciser)
 
 ### Q3 — Météo partagée entre régions
-- **A.** Oui
+Si oui, deux régions voisines ont le même ciel au même moment.
+
+- **A.** Oui (recommandé)
 - **B.** Autre (préciser)`;
 
 export function demoBoard(now = new Date()) {
