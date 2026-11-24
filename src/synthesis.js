@@ -80,5 +80,5 @@ export function summarize(board, sections, { since, now }) {
     const when = last?.createdAt || issue.closedAt || issue.updatedAt;
     return { number: card.number, title: card.title, section, when, body: last?.body || '', fresh: new Date(when) > since };
   }));
-  return { lines, reports };
+  return { lines, reports, count };
 }

@@ -76,3 +76,12 @@ test('reports: last comment of active and finished issues, fresh after the last 
 test('a closed stand-by issue is not listed as finished', () => {
   assert.deepEqual(lines(run([mk(1, ['stand-by'], { closedAt: ago({ hours: 1 }) })])), ['Rien de nouveau depuis ta dernière visite.']);
 });
+
+test('count of questions waiting for Ben (badge)', () => {
+  assert.equal(run([]).count, 0);
+  assert.equal(run([
+    mk(12, ['attente-ben'], { comments: [c(ASK, { hours: 2 })] }),
+    mk(5, ['attente-ben'], { comments: [c('## En attente de Ben : on garde ?', { hours: 2 })] }),
+    mk(13, ['attente-ben', 'stand-by'], { comments: [c(ASK, { hours: 2 })] }),
+  ]).count, 3);
+});

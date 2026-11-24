@@ -3,6 +3,20 @@ import { h } from '../dom.js';
 import { longDate } from '../format.js';
 import { newTokenUrl, parseExpiry } from '../github.js';
 
+function badgeBlock(ctx) {
+  const { doc } = ctx;
+  const title = h(doc, 'h2', null, 'Pastille sur l’icône');
+  if (ctx.badge === 'ready') {
+    return [title, h(doc, 'p', null, 'Active : l’icône de l’écran d’accueil montre le nombre de questions qui t’attendent, mis à jour à chaque ouverture.')];
+  }
+  if (ctx.badge === 'needs-permission') {
+    const enable = h(doc, 'button', { type: 'button' }, 'Activer la pastille');
+    enable.addEventListener('click', () => ctx.enableBadge());
+    return [title, h(doc, 'p', null, 'Sur iPhone, la pastille demande l’autorisation des notifications (aucune notification n’est envoyée) et l’app ajoutée à l’écran d’accueil.'), enable];
+  }
+  return [title, h(doc, 'p', null, 'Ce navigateur n’affiche pas de pastille sur l’icône (Chrome sur Android, par exemple) : le nombre de questions apparaît dans le titre de la page.')];
+}
+
 export function settingsView(ctx) {
   const { doc } = ctx;
   const input = h(doc, 'input', { type: 'password', id: 'token', name: 'token', autocomplete: 'off', spellcheck: 'false',
@@ -47,5 +61,6 @@ export function settingsView(ctx) {
     input,
     h(doc, 'div', { class: 'actions' }, save, ctx.hasToken ? forget : null),
     h(doc, 'p', { class: 'muted' }, 'Le jeton reste sur ce téléphone et ne part que vers api.github.com.'),
+    badgeBlock(ctx),
     h(doc, 'p', null, h(doc, 'a', { href: '#/demo' }, 'Voir le mode démo (données inventées)')));
 }

@@ -2,6 +2,8 @@
 import { AuthError, addLabel, loadBoard, loadComments, postComment, removeLabel } from './github.js';
 import { parseRoute } from './routes.js';
 import { runWrite } from './write.js';
+import { summarize } from './synthesis.js';
+import { badgeSupport, showCount } from './badge.js';
 import { STANDBY_LABEL, classify } from './classify.js';
 import { demoBoard } from './demo.js';
 import { h } from './dom.js';
@@ -50,6 +52,9 @@ async function load(demo) {
     boardIsDemo = false;
     loadedAt = new Date();
     authError = false;
+    const now = new Date();
+    const sections = classify(board.issues, { now, states: board.states, pilotageDate: board.pilotageDate });
+    showCount(summarize(board, sections, { since, now }).count);
   } catch (e) {
     if (e instanceof AuthError) { authError = true; location.hash = '#/settings'; }
     else error = e;
@@ -81,6 +86,8 @@ function context(r) {
     saveToken: value => { localStorage.setItem(TOKEN_KEY, value); authError = false; board = null; location.hash = '#/'; },
     forgetToken: () => { localStorage.removeItem(TOKEN_KEY); board = null; render(); },
     drafts,
+    badge: badgeSupport(window),
+    enableBadge: async () => { await Notification.requestPermission(); if (board && !boardIsDemo) await load(false); render(); },
     sendAnswers: (issue, body) => write(r,
       () => issue.comments.push({ body, createdAt: new Date().toISOString() }),
       t => postComment(t, issue.number, body)).then(() => { if (!writeError) drafts.delete(issue.number); }),
