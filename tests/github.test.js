@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { loadBoard, loadComments, newTokenUrl, normalizeIssue, parseExpiry, postComment, addLabel, removeLabel, AuthError, ApiError, WriteError } from '../src/github.js';
+import { loadBoard, loadClosedHistory, loadComments, newTokenUrl, normalizeIssue, parseExpiry, postComment, addLabel, removeLabel, AuthError, ApiError, WriteError } from '../src/github.js';
 
 const TOKEN = 'github_pat_TEST_ONLY_0000';
 const node = (number, extra = {}) => ({
@@ -173,4 +173,14 @@ test('writes: 403 is a WriteError, 401 an AuthError', async () => {
 
 test('removing a label that is already gone counts as done', async () => {
   await removeLabel(TOKEN, 1, 'stand-by', fakeFetch([{ status: 404, json: {} }]));
+});
+
+test('loadClosedHistory reads the 50 last closed issues with their comments', async () => {
+  const f = fakeFetch([{ json: { data: { repository: { closed: { nodes: [node(4, { state: 'CLOSED', closedAt: '2026-11-23T08:00:00Z', subIssues: undefined, parent: undefined }), null] } } } } }]);
+  const issues = await loadClosedHistory(TOKEN, f);
+  assert.deepEqual(issues.map(i => [i.number, i.state, i.commentsComplete, i.comments.length]), [[4, 'CLOSED', true, 1]]);
+  const query = JSON.parse(f.calls[0].init.body).query;
+  assert.match(query, /states: CLOSED, first: 50/);
+  assert.match(query, /comments\(last: 100\)/);
+  await assert.rejects(loadClosedHistory(TOKEN, fakeFetch([{ json: { errors: [{ message: 'boom' }] } }])), ApiError);
 });

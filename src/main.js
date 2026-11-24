@@ -1,11 +1,12 @@
 // Entry point: routing by hash, loading, writing, rendering.
-import { AuthError, addLabel, loadBoard, loadComments, postComment, removeLabel } from './github.js';
+import { AuthError, addLabel, loadBoard, loadClosedHistory, loadComments, postComment, removeLabel } from './github.js';
 import { parseRoute } from './routes.js';
 import { runWrite } from './write.js';
 import { summarize } from './synthesis.js';
 import { badgeSupport, showCount } from './badge.js';
 import { STANDBY_LABEL, classify } from './classify.js';
-import { demoBoard } from './demo.js';
+import { demoBoard, demoHistory } from './demo.js';
+import { decisionsView } from './views/decisions.js';
 import { h } from './dom.js';
 import { listView } from './views/list.js';
 import { issueView } from './views/issue.js';
@@ -32,6 +33,10 @@ let loading = false;
 let error = null;
 let authError = false;
 let writeError = null;
+let history = null;      // closed issues with all their comments, for the Decisions tab
+let historyError = null;
+let historyLoading = false;
+let decisionFilter = 'answered';
 
 const token = () => localStorage.getItem(TOKEN_KEY);
 
@@ -39,6 +44,8 @@ const route = () => parseRoute(location.hash);
 
 async function load(demo) {
   error = null;
+  history = null;
+  historyError = null;
   if (demo) {
     if (!boardIsDemo || !board) board = demoBoard(new Date());
     boardIsDemo = true;
@@ -79,6 +86,20 @@ function context(r) {
     doc, now, since, board, demo: r.demo, route: r.name, loadedAt, authError, writeError, hasToken: Boolean(token()),
     home: r.demo ? '#/demo' : '#/',
     listHref: `${base}/list`,
+    decisionsHref: `${base}/decisions`,
+    history, historyError, decisionFilter,
+    setDecisionFilter: f => { decisionFilter = f; render(); },
+    loadHistory: () => {
+      if (historyLoading) return;
+      historyLoading = true; // called while rendering: the result always arrives later
+      (r.demo ? Promise.resolve(demoHistory(new Date())) : loadClosedHistory(token()))
+        .then(list => { history = list; })
+        .catch(e => {
+          if (e instanceof AuthError) { authError = true; location.hash = '#/settings'; }
+          else historyError = e.message;
+        })
+        .finally(() => { historyLoading = false; render(); });
+    },
     issueHref: n => `${base}/issue/${n}`,
     sections: board ? classify(board.issues, { now, states: board.states, pilotageDate: board.pilotageDate }) : null,
     confirm: text => window.confirm(text),
@@ -119,7 +140,7 @@ function message(text, retry) {
   return box;
 }
 
-const VIEWS = { synthesis: synthesisView, list: listView };
+const VIEWS = { synthesis: synthesisView, list: listView, decisions: decisionsView };
 
 function render() {
   const r = route();

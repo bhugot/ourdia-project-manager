@@ -8,12 +8,13 @@ const EDIT_TOKENS_URL = 'https://github.com/settings/personal-access-tokens';
 
 export function header(ctx, { back = false } = {}) {
   const { doc } = ctx;
-  const refresh = h(doc, 'button', { type: 'button', class: 'refresh' }, 'Rafraîchir');
+  const refresh = h(doc, 'button', { type: 'button', class: 'refresh', 'aria-label': 'Rafraîchir', title: 'Rafraîchir' }, '↻');
   refresh.addEventListener('click', () => ctx.refresh());
   const tab = (href, label, current) => h(doc, 'a', { href, class: current ? 'tab current' : 'tab', 'aria-current': current ? 'page' : false }, label);
   return h(doc, 'header', { class: 'top' },
     back ? h(doc, 'a', { class: 'back', href: ctx.home }, '← Retour') : h(doc, 'nav', { class: 'tabs' },
-      tab(ctx.home, 'Synthèse', ctx.route === 'synthesis'), tab(ctx.listHref, 'Liste', ctx.route === 'list')),
+      tab(ctx.home, 'Synthèse', ctx.route === 'synthesis'), tab(ctx.listHref, 'Liste', ctx.route === 'list'),
+      tab(ctx.decisionsHref, 'Décisions', ctx.route === 'decisions')),
     h(doc, 'span', { class: 'stamp' }, ctx.loadedAt ? `lu à ${dayTime(ctx.loadedAt).split(' ')[1]}` : ''),
     refresh,
     h(doc, 'a', { class: 'settings-link', href: '#/settings', 'aria-label': 'Réglages' }, '⚙'));

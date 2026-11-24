@@ -62,3 +62,43 @@ export function demoBoard(now = new Date()) {
     tokenExpiry: null,
   };
 }
+
+const DEMO_OLD_ASK = `## En attente de Ben
+
+### Q1 — Taille des groupes de PNJ
+Fixe combien de PNJ suivent une même routine.
+
+- **A.** Trois (recommandé)
+- **B.** Cinq
+- **C.** Autre (préciser)
+
+### Q2 — Nom du premier village
+- **A.** Brume (recommandé)
+- **B.** Autre (préciser)`;
+
+const DEMO_SECOND_ASK = `## En attente de Ben
+
+Fait : routines branchées.
+
+### Q1 — Taille des groupes, reposée
+Trois donne des places trop vides.
+
+- **A.** Quatre (recommandé)
+- **B.** Autre (préciser)`;
+
+/** Closed issues with all their comments, as the Decisions tab loads them. */
+export function demoHistory(now = new Date()) {
+  const ago = hours => new Date(now - hours * 3600000).toISOString();
+  const c = (body, hours) => ({ body, createdAt: ago(hours) });
+  const closed = (number, title, comments, closedHours) => ({
+    number, title, body: '', state: 'CLOSED', labels: ['cloud'], assignees: [], createdAt: ago(200), updatedAt: ago(closedHours),
+    closedAt: ago(closedHours), comments, commentsComplete: true, parent: null, subIssues: [],
+  });
+  return [
+    closed(108, 'Corriger le chargement des cartes', [c('Fini : correction poussée (`9f8e7d6`), tests verts.', 3)], 3),
+    closed(95, 'Routines des PNJ', [
+      c(DEMO_OLD_ASK, 100), c('## Réponses de Ben\n\nQ1 : A\nQ2 : B — Brumeval', 96),
+      c(DEMO_SECOND_ASK, 60), c('Q1 : A', 58), c('Fini : groupes de quatre, village de Brumeval.', 50),
+    ], 50),
+  ];
+}

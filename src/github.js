@@ -135,6 +135,17 @@ async function loadCited(token, fetchFn, issues, warnings) {
   return { states, refs };
 }
 
+/** The 50 most recently updated closed issues with their last 100 comments (Decisions tab). */
+export async function loadClosedHistory(token, fetchFn = fetch) {
+  const { data, errors } = await graphql(token, fetchFn,
+    `query { repository(owner: "${OWNER}", name: "${REPO}") {
+      closed: issues(states: CLOSED, first: 50, orderBy: {field: UPDATED_AT, direction: DESC}) {
+        nodes { ${fields(false)} comments(last: 100) { nodes { body createdAt } } } } } }`);
+  const nodes = data?.repository?.closed?.nodes;
+  if (!nodes) throw new ApiError(errors.map(e => e.message).join(' ; ') || 'Issues fermées illisibles');
+  return nodes.filter(Boolean).map(n => normalizeIssue(n, true));
+}
+
 /** All recent comments of one issue (detail page of a closed issue). */
 export async function loadComments(token, number, fetchFn = fetch) {
   const { data, errors } = await graphql(token, fetchFn,

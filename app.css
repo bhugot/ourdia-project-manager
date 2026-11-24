@@ -118,3 +118,22 @@ details[open].section summary h2::before { content: "▾ "; }
 button:disabled { opacity: .5; }
 .issue-actions { align-items: center; gap: 14px; }
 .banner p { margin: 0 0 4px; }
+
+/* Jalon 3 : décisions */
+.filters { display: flex; align-items: center; gap: 6px; margin: 12px 0 4px; }
+.filters .count { margin-right: 8px; }
+.filter[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.decisions { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 8px; }
+.decision { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.decision p { margin: 0; }
+.decision-head { font-weight: 600; }
+.decision-head a { display: inline-block; min-width: 44px; padding: 2px 0; }
+.decision-answer { color: var(--running); font-weight: 600; }
+.decision.pending .decision-answer { color: var(--waiting); font-weight: normal; }
+.decision-meta { font-size: .82rem; }
+@media (max-width: 420px) {
+  .top { gap: 4px; }
+  .tab { padding: 0 7px; }
+  .top .stamp { font-size: .72rem; }
+}
+.refresh { min-width: 44px; padding: 0 10px; font-size: 1.2rem; }

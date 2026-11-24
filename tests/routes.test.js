@@ -13,3 +13,8 @@ test('routes', () => {
   assert.deepEqual(parseRoute('#/demo/issue/112'), { name: 'issue', number: 112, demo: true });
   assert.deepEqual(parseRoute('#/nimporte'), { name: 'synthesis', demo: false });
 });
+
+test('decisions route', () => {
+  assert.deepEqual(parseRoute('#/decisions'), { name: 'decisions', demo: false });
+  assert.deepEqual(parseRoute('#/demo/decisions'), { name: 'decisions', demo: true });
+});
