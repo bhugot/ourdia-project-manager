@@ -23,7 +23,7 @@ button { font: inherit; min-height: 44px; padding: 0 14px; border-radius: 10px; 
 button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 
 .top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 8px 0; background: var(--bg); border-bottom: 1px solid var(--line); }
-.top .stamp { margin-left: auto; font-size: .85rem; }
+.top .stamp { margin-left: auto; font-size: .8rem; white-space: nowrap; }
 .top .back, .settings-link { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
 .top .back { justify-content: flex-start; }
 .settings-link { font-size: 1.3rem; color: var(--fg); }
@@ -95,3 +95,26 @@ details[open].section summary h2::before { content: "▾ "; }
 .view-settings h2 { margin-top: 24px; }
 .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .view-message { padding-top: 24px; }
+
+/* Jalon 2 : onglets, synthèse, réponses */
+.tabs { display: flex; gap: 4px; }
+.tab { min-height: 44px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 10px; text-decoration: none; color: var(--fg); font-weight: 600; }
+.tab.current { background: var(--card); border: 1px solid var(--line); }
+.summary h2, .reports h2 { margin: 16px 0 8px; font-size: 1rem; color: var(--muted); font-weight: 600; }
+.summary-lines { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 1.02rem; }
+.report { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+.report-head { margin: 0; font-weight: 600; }
+.report-head a { color: inherit; text-decoration: none; }
+.report-head .num { color: var(--muted); font-weight: normal; }
+.report-meta { margin: 2px 0 0; font-size: .85rem; color: var(--muted); }
+.tag { font-weight: 600; }
+.tag-waiting { color: var(--waiting); } .tag-blocked { color: var(--blocked); } .tag-running { color: var(--running); } .tag-done { color: var(--done); }
+.fresh { margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent); color: var(--bg); font-size: .75rem; }
+.answer-form { margin-top: 8px; display: grid; gap: 6px; }
+.letters { display: flex; gap: 6px; flex-wrap: wrap; }
+.letter { min-width: 44px; font-weight: 700; }
+.letter[aria-pressed="true"] { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.note-input { width: 100%; min-height: 44px; font: inherit; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+button:disabled { opacity: .5; }
+.issue-actions { align-items: center; gap: 14px; }
+.banner p { margin: 0 0 4px; }

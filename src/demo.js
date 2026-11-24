@@ -47,6 +47,7 @@ export function demoBoard(now = new Date()) {
     issue(140, 'Idée : marchés itinérants', ['zone:design'], {
       body: 'Une note libre, avec du HTML qui doit rester du texte : <script>alert(1)</script> <img src=x onerror=alert(1)>\n\nEt un lien piégé : [cliquer](javascript:alert(1)).',
     }),
+    issue(150, 'Prototype de navires', ['cloud-plus', 'stand-by'], { body: 'Mise en pause en attendant le moteur de physique.' }),
     issue(108, 'Corriger le chargement des cartes', ['cloud'], {
       state: 'CLOSED', closedAt: ago(3), commentsComplete: true,
       comments: [c('Fini : correction poussée (`9f8e7d6`), tests verts. Session : https://claude.ai/code/session_DEMO0004', 3)],

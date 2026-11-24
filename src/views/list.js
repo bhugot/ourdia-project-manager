@@ -20,7 +20,7 @@ function section(ctx, key, title, cards) {
   const list = cards.length
     ? h(doc, 'ul', { class: 'cards' }, cards.map(c => cardItem(ctx, c)))
     : h(doc, 'p', { class: 'empty' }, 'aucune');
-  if (key === 'other') {
+  if (key === 'other' || key === 'standby') {
     return h(doc, 'details', { class: `section section-${key}` },
       h(doc, 'summary', null, h(doc, 'h2', null, `${title} `, h(doc, 'span', { class: 'count' }, cards.length))), list);
   }
@@ -36,7 +36,7 @@ export function listView(ctx) {
   return h(doc, 'div', { class: 'view view-list' },
     header(ctx),
     banners(ctx),
-    SECTIONS.filter(([key]) => key !== 'other' || sections.other.length)
+    SECTIONS.filter(([key]) => (key !== 'other' && key !== 'standby') || sections[key].length)
       .map(([key, title]) => section(ctx, key, title, sections[key])),
     h(doc, 'section', { class: 'section section-pc' }, h(doc, 'h2', null, 'PC'),
       h(doc, 'p', { class: pc.idle ? 'pc idle' : 'pc' }, pcText)));

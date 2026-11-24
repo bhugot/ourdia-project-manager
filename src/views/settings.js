@@ -37,7 +37,7 @@ export function settingsView(ctx) {
     h(doc, 'h2', null, 'Une fois par an'),
     h(doc, 'ol', { class: 'steps' },
       h(doc, 'li', null, h(doc, 'a', { href: newTokenUrl(), rel: 'noopener noreferrer', target: '_blank' }, 'Ouvrir le formulaire GitHub prérempli ↗'),
-        ' (nom, durée d\'un an, Issues et Contents en lecture).'),
+        ' (nom, durée d\'un an, Issues en écriture, Contents en lecture).'),
       h(doc, 'li', null, 'Dans « Repository access », choisir ', h(doc, 'strong', null, 'Only select repositories → ourdia'), '.'),
       h(doc, 'li', null, '« Generate token », puis copier le jeton.'),
       h(doc, 'li', null, 'Revenir ici et toucher le bouton ci-dessous.')),

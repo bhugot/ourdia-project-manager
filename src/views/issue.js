@@ -6,6 +6,8 @@ import { finishedWhen, sessionLinks } from '../parse.js';
 import { dependencies } from '../deps.js';
 import { dayTime } from '../format.js';
 import { banners, header } from './common.js';
+import { formatAnswers } from '../answers.js';
+import { STANDBY_LABEL } from '../classify.js';
 
 const GITHUB_ISSUE = n => `https://github.com/bhugot/ourdia/issues/${n}`;
 const stateText = s => (s === 'OPEN' ? 'ouverte' : s === 'CLOSED' ? 'fermée' : 'état inconnu');
@@ -14,17 +16,69 @@ function block(doc, title, ...content) {
   return h(doc, 'section', { class: 'block' }, h(doc, 'h2', null, title), ...content);
 }
 
+/** Letter buttons and a note field for one unanswered question; `entry` holds the choice. */
+function answerInputs(ctx, q, entry, onChange) {
+  const { doc } = ctx;
+  const buttons = q.options.map(o => {
+    const b = h(doc, 'button', { type: 'button', class: 'letter', 'aria-pressed': 'false', 'aria-label': `${o.letter}. ${o.text}` }, o.letter);
+    b.addEventListener('click', () => {
+      entry.letter = entry.letter === o.letter ? null : o.letter;
+      for (const [i, other] of buttons.entries()) other.setAttribute('aria-pressed', String(q.options[i].letter === entry.letter));
+      onChange();
+    });
+    return b;
+  });
+  const note = h(doc, 'input', { type: 'text', class: 'note-input', placeholder: 'commentaire (facultatif)', 'aria-label': `Commentaire pour Q${q.n}` });
+  note.addEventListener('input', () => { entry.note = note.value; onChange(); });
+  return h(doc, 'div', { class: 'answer-form' }, buttons.length ? h(doc, 'div', { class: 'letters' }, buttons) : null, note);
+}
+
 function questions(ctx, issue) {
   const { doc } = ctx;
   const status = questionStatus(issue.comments);
   if (!status) return null;
-  return block(doc, 'Questions', h(doc, 'ol', { class: 'questions' }, status.questions.map(q => {
+  const canAnswer = issue.state === 'OPEN';
+  const entries = [];
+  const send = h(doc, 'button', { type: 'button', class: 'primary', disabled: true }, 'Envoyer les réponses');
+  const refreshSend = () => { send.disabled = !formatAnswers(entries); };
+  send.addEventListener('click', async () => {
+    const body = formatAnswers(entries);
+    if (!body || !ctx.confirm(`Poster ce commentaire sur #${issue.number} ?\n\n${body}`)) return;
+    send.disabled = true;
+    send.textContent = 'Envoi…';
+    await ctx.sendAnswers(issue, body);
+  });
+  const items = status.questions.map(q => {
     const answer = status.answers.get(q.n);
+    let form = null;
+    if (!answer && canAnswer) {
+      const entry = { n: q.n, letter: null, note: '' };
+      entries.push(entry);
+      form = answerInputs(ctx, q, entry, refreshSend);
+    }
     return h(doc, 'li', { class: answer ? 'question answered' : 'question' },
       h(doc, 'p', { class: 'q-title' }, `Q${q.n} — ${q.title}`, q.optional ? h(doc, 'span', { class: 'muted' }, ' (peut attendre)') : null),
       q.options.length ? h(doc, 'ul', { class: 'options' }, q.options.map(o => h(doc, 'li', null, h(doc, 'strong', null, `${o.letter}. `), o.text))) : null,
-      h(doc, 'p', { class: 'answer' }, answer ? `Réponse : ${answer}` : 'sans réponse'));
-  })));
+      h(doc, 'p', { class: 'answer' }, answer ? `Réponse : ${answer}` : 'sans réponse'),
+      form);
+  });
+  return block(doc, 'Questions', h(doc, 'ol', { class: 'questions' }, items),
+    entries.length ? h(doc, 'div', { class: 'actions' }, send) : null);
+}
+
+function actions(ctx, issue) {
+  const { doc } = ctx;
+  const github = h(doc, 'a', { href: GITHUB_ISSUE(issue.number), rel: 'noopener noreferrer', target: '_blank' }, 'Ouvrir dans GitHub ↗');
+  if (issue.state !== 'OPEN') return h(doc, 'p', null, github);
+  const paused = issue.labels.includes(STANDBY_LABEL);
+  const toggle = h(doc, 'button', { type: 'button' }, paused ? 'Reprendre' : 'Mettre en stand-by');
+  toggle.addEventListener('click', async () => {
+    const question = paused ? `Reprendre #${issue.number} (retirer le label stand-by) ?` : `Mettre #${issue.number} en stand-by ?`;
+    if (!ctx.confirm(question)) return;
+    toggle.disabled = true;
+    await ctx.setStandby(issue, !paused);
+  });
+  return h(doc, 'div', { class: 'actions issue-actions' }, toggle, github);
 }
 
 function progress(ctx, issue) {
@@ -89,7 +143,7 @@ export function issueView(ctx, number) {
       h(doc, 'span', { class: `state ${issue.state === 'OPEN' ? 'open' : 'closed'}` }, stateText(issue.state)),
       issue.labels.map(l => h(doc, 'span', { class: 'label' }, l)),
       issue.assignees.length ? h(doc, 'span', { class: 'muted' }, ` prise par ${issue.assignees.join(', ')}`) : null),
-    h(doc, 'p', null, h(doc, 'a', { href: GITHUB_ISSUE(issue.number), rel: 'noopener noreferrer', target: '_blank' }, 'Ouvrir dans GitHub ↗')),
+    actions(ctx, issue),
     questions(ctx, issue),
     progress(ctx, issue),
     sessions(ctx, issue),
