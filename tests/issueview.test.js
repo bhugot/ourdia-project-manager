@@ -102,3 +102,20 @@ test('no follow button without a recommendation left to take', () => {
   issueView(ctx, 12);
   assert.ok(!ctx.doc.created.some(e => e.tagName === 'BUTTON' && text(e) === 'Suivre les recommandations'));
 });
+
+test('the progress block sums up the issue at the top', () => {
+  const issue = { ...openIssue(['cloud'], [{ body: 'Point d\'étape : modèle fait.', createdAt: '2026-11-23T09:00:00Z' }]),
+    body: 'voie: serveur\n\nGénérer la météo.\n\n## Fini quand\n- [x] a\n- [ ] b', subIssues: [13] };
+  const ctx = ctxFor(issue, { sections: { running: [{ number: 12, detail: 'prise par Sonnet' }] } });
+  ctx.board.issues.push({ number: 13, title: 'Sous', state: 'CLOSED', labels: [], comments: [] });
+  issueView(ctx, 12);
+  const block = text(ctx.doc.created.find(e => e.attributes.class === 'block progress'));
+  assert.match(block, /Où en est-on/);
+  assert.match(block, /En cours — prise par Sonnet/);
+  assert.match(block, /Générer la météo\./);
+  assert.match(block, /Fini quand 1\/2/);
+  assert.match(block, /Sous-issues 1\/1 fermées/);
+  assert.match(block, /Point d'étape : modèle fait\./);
+  const bars = ctx.doc.created.filter(e => e.tagName === 'PROGRESS').map(e => [e.attributes.value, e.attributes.max]);
+  assert.deepEqual(bars, [['1', '2'], ['1', '1']]);
+});

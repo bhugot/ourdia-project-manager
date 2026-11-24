@@ -2,7 +2,8 @@
 import { h } from '../dom.js';
 import { renderMarkdown } from '../markdown.js';
 import { questionStatus } from '../questions.js';
-import { finishedWhen, sessionLinks } from '../parse.js';
+import { sessionLinks } from '../parse.js';
+import { progressOf } from '../progress.js';
 import { dependencies } from '../deps.js';
 import { dayTime } from '../format.js';
 import { banners, header } from './common.js';
@@ -113,13 +114,32 @@ function actions(ctx, issue) {
   return h(doc, 'div', { class: 'actions issue-actions' }, toggle, github);
 }
 
+function row(doc, label, ...content) {
+  return [h(doc, 'dt', null, label), h(doc, 'dd', null, ...content)];
+}
+
 function progress(ctx, issue) {
   const { doc } = ctx;
-  const fw = finishedWhen(issue.body);
-  if (!fw || !fw.items.length) return null;
-  return block(doc, fw.total ? `Fini quand — ${fw.done}/${fw.total}` : 'Fini quand',
-    h(doc, 'ul', { class: 'finished' }, fw.items.map(item => h(doc, 'li', null,
-      item.done === null ? null : h(doc, 'input', { type: 'checkbox', disabled: true, checked: item.done }), ` ${item.text}`))));
+  const p = progressOf(issue, { issues: ctx.board.issues, refs: ctx.board.refs || new Map(), sections: ctx.sections || null });
+  const rows = [];
+  if (p.status) rows.push(row(doc, 'Statut', p.status.title + (p.status.detail ? ` — ${p.status.detail}` : '')));
+  if (p.goal) rows.push(row(doc, 'But', p.goal));
+  if (p.finished) {
+    const f = p.finished;
+    rows.push(row(doc, 'Fini quand', f.total ? [h(doc, 'progress', { value: f.done, max: f.total, 'aria-label': 'Fini quand' }), ` ${f.done}/${f.total}`] : null,
+      h(doc, 'details', null, h(doc, 'summary', null, `${f.items.length} critère${f.items.length > 1 ? 's' : ''}`),
+        h(doc, 'ul', { class: 'finished' }, f.items.map(item => h(doc, 'li', null,
+          item.done === null ? null : h(doc, 'input', { type: 'checkbox', disabled: true, checked: item.done }), ` ${item.text}`))))));
+  }
+  if (p.sub) {
+    rows.push(row(doc, 'Sous-issues', h(doc, 'progress', { value: p.sub.done, max: p.sub.total, 'aria-label': 'Sous-issues fermées' }), ` ${p.sub.done}/${p.sub.total} fermées`,
+      h(doc, 'details', null, h(doc, 'summary', null, 'liste'),
+        h(doc, 'ul', { class: 'sub-list' }, p.sub.items.map(i => h(doc, 'li', { class: i.state === 'CLOSED' ? 'closed' : '' },
+          h(doc, 'a', { href: ctx.issueHref(i.number) }, `#${i.number}`), i.title ? ` ${i.title}` : '', ` — ${stateText(i.state)}`))))));
+  }
+  if (p.lastNote) rows.push(row(doc, 'Dernier point', h(doc, 'span', { class: 'muted' }, `${dayTime(p.lastNote.createdAt)} `), p.lastNote.line));
+  if (!rows.length) return null;
+  return h(doc, 'section', { class: 'block progress' }, h(doc, 'h2', null, 'Où en est-on'), h(doc, 'dl', { class: 'where' }, rows.flat()));
 }
 
 function sessions(ctx, issue) {
@@ -176,8 +196,8 @@ export function issueView(ctx, number) {
       issue.labels.map(l => h(doc, 'span', { class: 'label' }, l)),
       issue.assignees.length ? h(doc, 'span', { class: 'muted' }, ` prise par ${issue.assignees.join(', ')}`) : null),
     actions(ctx, issue),
-    questions(ctx, issue),
     progress(ctx, issue),
+    questions(ctx, issue),
     sessions(ctx, issue),
     deps(ctx, issue),
     block(doc, 'Description', h(doc, 'div', { class: 'md' }, renderMarkdown(issue.body, doc, { issueHref: ctx.issueHref }))),

@@ -2,7 +2,7 @@
 // No event handler, inline style or HTML string can get through.
 
 const ALLOWED = new Set(['class', 'href', 'type', 'disabled', 'checked', 'rel', 'target', 'id', 'for', 'name',
-  'autocomplete', 'placeholder', 'inputmode', 'open', 'role', 'spellcheck', 'datetime', 'title']);
+  'autocomplete', 'placeholder', 'inputmode', 'open', 'role', 'spellcheck', 'datetime', 'title', 'value', 'max']);
 
 export function h(doc, tag, attrs, ...children) {
   const el = doc.createElement(tag);
