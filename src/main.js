@@ -85,6 +85,7 @@ async function write(r, demoChange, realWrite) {
 function context(r) {
   const now = new Date();
   const base = r.demo ? '#/demo' : '#';
+  const sections = board ? classify(board.issues, { now, states: board.states, pilotageDate: board.pilotageDate }) : null;
   return {
     doc, now, since, board, demo: r.demo, route: r.name, loadedAt, authError, writeError, hasToken: Boolean(token()),
     home: r.demo ? '#/demo' : '#/',
@@ -106,7 +107,8 @@ function context(r) {
         .finally(() => { if (mine === generation) { historyLoading = false; render(); } });
     },
     issueHref: n => `${base}/issue/${n}`,
-    sections: board ? classify(board.issues, { now, states: board.states, pilotageDate: board.pilotageDate }) : null,
+    sections,
+    waiting: sections ? summarize(board, sections, { since, now }).count : 0, // same count as the summary and the icon
     confirm: text => window.confirm(text),
     refresh: async () => { writeError = null; if (r.demo) board = null; await load(r.demo); render(); },
     saveToken: value => { localStorage.setItem(TOKEN_KEY, value); authError = false; board = null; location.hash = '#/'; },
