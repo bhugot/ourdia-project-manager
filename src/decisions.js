@@ -32,11 +32,15 @@ export function decisionsOf(issue) {
   return out;
 }
 
-/** {answered (newest first), pending (required first, then oldest ask first)} over all issues. */
+/**
+ * {answered (newest first), pending (required first, then oldest ask first)}. Pending questions of
+ * closed issues are left out: they went to open-questions.md when the issue was closed.
+ */
 export function allDecisions(issues) {
   const all = issues.flatMap(decisionsOf);
   const answered = all.filter(d => d.answer !== null).sort((a, b) => new Date(b.answeredAt) - new Date(a.answeredAt));
-  const pending = all.filter(d => d.answer === null)
+  const open = new Set(issues.filter(i => i.state === 'OPEN').map(i => i.number));
+  const pending = all.filter(d => d.answer === null && open.has(d.issue))
     .sort((a, b) => (a.optional - b.optional) || (new Date(a.askedAt) - new Date(b.askedAt)));
   return { answered, pending };
 }

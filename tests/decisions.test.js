@@ -5,7 +5,7 @@ import { allDecisions, answerText, decisionsOf } from '../src/decisions.js';
 const ASK_A = '## En attente de Ben\n### Q1 — Taille\n- **A.** Trois (recommandé)\n- **B.** Autre (préciser)\n### Q2 — Nom\n- **A.** Brume\n- **B.** Autre (préciser)\n';
 const ASK_B = '## En attente de Ben\n### Q1 — Taille, reposée\n- **A.** Quatre\n- **B.** Autre (préciser)\n### Q3 — Hiver (peut attendre)\n- **A.** Court\n';
 const c = (body, createdAt) => ({ body, createdAt });
-const issue = (number, comments) => ({ number, title: `Issue ${number}`, comments });
+const issue = (number, comments) => ({ number, title: `Issue ${number}`, state: 'OPEN', comments });
 
 test('answerText replaces a known letter by its option', () => {
   const q = { options: [{ letter: 'A', label: 'Trois' }, { letter: 'B', label: 'Autre (préciser)' }] };
@@ -43,4 +43,12 @@ test('allDecisions: answered newest first, then pending with required first', ()
   ]);
   assert.deepEqual(all.answered.map(x => `${x.issue}-${x.n}`), ['2-1', '1-2']);
   assert.deepEqual(all.pending.map(x => `${x.issue}-${x.n}`), ['1-1', '2-3']);
+});
+
+test('pending only lists questions of open issues', () => {
+  const all = allDecisions([
+    { ...issue(1, [c(ASK_A, '2026-11-20T10:00:00Z')]), state: 'CLOSED' },
+    { ...issue(2, [c(ASK_A, '2026-11-20T10:00:00Z'), c('Q1 : A', '2026-11-20T11:00:00Z')]), state: 'OPEN' },
+  ]);
+  assert.deepEqual(all.pending.map(x => `${x.issue}-${x.n}`), ['2-2']);
 });

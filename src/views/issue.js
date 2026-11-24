@@ -91,7 +91,7 @@ ${body}`)) return;
   if (followable.length) {
     follow = h(doc, 'button', { type: 'button' }, 'Suivre les recommandations');
     follow.addEventListener('click', () => {
-      for (const [entry, letter, sync] of followable) { entry.letter = letter; sync(); }
+      for (const [entry, letter, sync] of followable) if (entry.letter === null) { entry.letter = letter; sync(); }
       refreshSend();
     });
   }
@@ -212,7 +212,7 @@ function notes(ctx, issue) {
 
 export function issueView(ctx, number) {
   const { doc } = ctx;
-  const issue = ctx.board.issues.find(i => i.number === number);
+  const issue = ctx.board.issues.find(i => i.number === number) || (ctx.history || []).find(i => i.number === number);
   if (!issue) {
     return h(doc, 'div', { class: 'view view-issue' }, header(ctx, { back: true }),
       h(doc, 'p', null, `L'issue #${number} n'est pas dans la liste chargée (ouvertes et fermées récentes). `,

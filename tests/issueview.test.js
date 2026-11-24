@@ -148,3 +148,17 @@ test('only the 3 most recent comments stay unfolded', () => {
   const hrefs = ctx.doc.created.filter(e => e.tagName === 'A').map(e => e.attributes.href);
   assert.ok(hrefs.every(h => /^(#\/|https?:)/.test(h)), hrefs.join(' '));
 });
+
+test('follow the recommendations keeps a letter Ben already picked', async () => {
+  const ctx = ctxFor(openIssue(['attente-ben'], [{ body: ASK_REC, createdAt: '2026-11-23T10:00:00Z' }]));
+  ctx.drafts.set(12, new Map([[1, { n: 1, letter: 'B', note: 'plutôt' }]]));
+  issueView(ctx, 12);
+  await fire(ctx.doc.created.find(e => e.tagName === 'BUTTON' && text(e) === 'Suivre les recommandations'), 'click');
+  assert.deepEqual([...ctx.drafts.get(12).values()].map(e => [e.n, e.letter, e.note]), [[1, 'B', 'plutôt'], [2, null, ''], [3, 'B', '']]);
+});
+
+test('an issue only in the closed history still opens', () => {
+  const ctx = ctxFor(openIssue([]));
+  ctx.history = [{ ...openIssue([]), number: 40, title: 'Ancienne', state: 'CLOSED' }];
+  assert.match(text(issueView(ctx, 40)), /#40 Ancienne/);
+});

@@ -36,6 +36,7 @@ let writeError = null;
 let history = null;      // closed issues with all their comments, for the Decisions tab
 let historyError = null;
 let historyLoading = false;
+let generation = 0;       // bumped by every load(): a late history answer from before is dropped
 let decisionFilter = 'answered';
 
 const token = () => localStorage.getItem(TOKEN_KEY);
@@ -44,8 +45,10 @@ const route = () => parseRoute(location.hash);
 
 async function load(demo) {
   error = null;
+  generation += 1;
   history = null;
   historyError = null;
+  historyLoading = false;
   if (demo) {
     if (!boardIsDemo || !board) board = demoBoard(new Date());
     boardIsDemo = true;
@@ -92,13 +95,15 @@ function context(r) {
     loadHistory: () => {
       if (historyLoading) return;
       historyLoading = true; // called while rendering: the result always arrives later
+      const mine = generation;
       (r.demo ? Promise.resolve(demoHistory(new Date())) : loadClosedHistory(token()))
-        .then(list => { history = list; })
+        .then(list => { if (mine === generation) history = list; })
         .catch(e => {
+          if (mine !== generation) return;
           if (e instanceof AuthError) { authError = true; location.hash = '#/settings'; }
           else historyError = e.message;
         })
-        .finally(() => { historyLoading = false; render(); });
+        .finally(() => { if (mine === generation) { historyLoading = false; render(); } });
     },
     issueHref: n => `${base}/issue/${n}`,
     sections: board ? classify(board.issues, { now, states: board.states, pilotageDate: board.pilotageDate }) : null,
