@@ -10,12 +10,17 @@ const ANSWER_RE = /^[ \t]*(?:[-*][ \t]*)?\**Q(\d+)\**[ \t]*[:：][ \t]*(\S.*?)[ 
 const OPTIONAL_RE = /[ \t]*\(peut attendre\)[ \t.]*$/i;
 const SAME_LINE_RE = /[ \t]*[,;][ \t]*(?=Q\d+[ \t]*[:：])/gi;
 const OPTION_RE = /^[ \t]*[-*][ \t]*\*\*([A-Z])\.\*\*[ \t]*(.*?)[ \t]*$/gm;
+const RECOMMENDED_RE = /[ \t]*\(recommandée?\)[ \t.]*$/i;
 
 export function isAsk(body) {
   return (body || '').trimStart().startsWith(ASK_HEADING);
 }
 
-/** Questions of an `## En attente de Ben` comment: [{n, title, optional, options}]. */
+/**
+ * Questions of an `## En attente de Ben` comment: [{n, title, optional, context, options}].
+ * `context` is the text between the title and the first option; each option has its raw `text`,
+ * a `label` without « (recommandé) », and `recommended`.
+ */
 export function parseQuestions(body) {
   const text = body || '';
   const matches = [...text.matchAll(QUESTION_RE)];
@@ -25,8 +30,10 @@ export function parseQuestions(body) {
     const title = m[2].replace(OPTIONAL_RE, '').replace(/[ .]+$/, '') || `question ${n}`;
     const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
     const section = text.slice(m.index + m[0].length, end);
-    const options = [...section.matchAll(OPTION_RE)].map(o => ({ letter: o[1], text: o[2] }));
-    return { n, title, optional, options };
+    const found = [...section.matchAll(OPTION_RE)];
+    const options = found.map(o => ({ letter: o[1], text: o[2], label: o[2].replace(RECOMMENDED_RE, ''), recommended: RECOMMENDED_RE.test(o[2]) }));
+    const context = (found.length ? section.slice(0, found[0].index) : section).trim();
+    return { n, title, optional, context, options };
   });
 }
 

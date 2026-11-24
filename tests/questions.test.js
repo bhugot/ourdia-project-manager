@@ -9,8 +9,9 @@ test('parseQuestions reads numbers, titles, optional flag and options', () => {
   assert.deepEqual(triples(parseQuestions(ASK)),
     [[1, 'Taille des groupes', false], [2, 'Nom du village', true], [3, "Durée d'un hiver", false]]);
   assert.deepEqual(parseQuestions(ASK)[2].options,
-    [{ letter: 'A', text: '3 jours' }, { letter: 'B', text: 'Autre (préciser)' }]);
-  assert.deepEqual(parseQuestions(ASK)[0].options[0], { letter: 'A', text: 'Trois (recommandé)' });
+    [{ letter: 'A', text: '3 jours', label: '3 jours', recommended: false },
+      { letter: 'B', text: 'Autre (préciser)', label: 'Autre (préciser)', recommended: false }]);
+  assert.deepEqual(parseQuestions(ASK)[0].options[0], { letter: 'A', text: 'Trois (recommandé)', label: 'Trois', recommended: true });
   assert.deepEqual(triples(parseQuestions('### q1 Taille\n### Q2 — Nom (Peut attendre).\n')),
     [[1, 'Taille', false], [2, 'Nom', true]]);
 });
@@ -37,4 +38,13 @@ test('questionStatus counts answers after the last ask only', () => {
   assert.deepEqual(s.pending, [3]);
   c.push({ body: 'Q3 : A' });
   assert.deepEqual(questionStatus(c).pending, []);
+});
+
+test('parseQuestions keeps the context and spots the recommendation', () => {
+  const [q1, q2] = parseQuestions(ASK);
+  assert.equal(q1.context, 'Contexte.');
+  assert.equal(q2.context, '');
+  const [q] = parseQuestions('### Q1 — x\nLigne un.\nLigne deux.\n\n- **A.** Oui (Recommandée).\n- **B.** Non\n');
+  assert.equal(q.context, 'Ligne un.\nLigne deux.');
+  assert.deepEqual(q.options.map(o => [o.label, o.recommended]), [['Oui', true], ['Non', false]]);
 });
