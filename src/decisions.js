@@ -1,5 +1,7 @@
 // Ben's decisions: every question of every `## En attente de Ben` series of an issue, with the
-// answer given after that series and before the next one (the last answer wins).
+// answer given after that series and before the next one (the last answer wins). A question left
+// unanswered when a newer series is asked is superseded: only the last series waits on Ben, as in
+// dashboard.py and on the issue card.
 import { isAsk, parseAnswers, parseQuestions } from './questions.js';
 
 const LETTER_RE = /^([A-Za-z])\b\.?[ \t]*(?:[—–-][ \t]*(.*))?$/;
@@ -19,14 +21,16 @@ export function decisionsOf(issue) {
     if (!isAsk(ask.body)) return;
     const questions = parseQuestions(ask.body);
     const answers = new Map();
+    let newer = false;
     for (const c of comments.slice(i + 1)) {
-      if (isAsk(c.body)) break;
+      if (isAsk(c.body)) { newer = true; break; }
       for (const [n, a] of parseAnswers(c.body)) answers.set(n, { raw: a, at: c.createdAt });
     }
     for (const q of questions) {
       const a = answers.get(q.n);
       out.push({ issue: issue.number, title: issue.title, n: q.n, question: q.title, optional: q.optional,
-        askedAt: ask.createdAt, answer: a?.raw ?? null, answerText: a ? answerText(q, a.raw) : null, answeredAt: a?.at ?? null });
+        askedAt: ask.createdAt, answer: a?.raw ?? null, answerText: a ? answerText(q, a.raw) : null, answeredAt: a?.at ?? null,
+        superseded: !a && newer });
     }
   });
   return out;
@@ -34,13 +38,14 @@ export function decisionsOf(issue) {
 
 /**
  * {answered (newest first), pending (required first, then oldest ask first)}. Pending questions of
- * closed issues are left out: they went to open-questions.md when the issue was closed.
+ * closed issues are left out: they went to open-questions.md when the issue was closed. Superseded
+ * questions are in neither list.
  */
 export function allDecisions(issues) {
   const all = issues.flatMap(decisionsOf);
   const answered = all.filter(d => d.answer !== null).sort((a, b) => new Date(b.answeredAt) - new Date(a.answeredAt));
   const open = new Set(issues.filter(i => i.state === 'OPEN').map(i => i.number));
-  const pending = all.filter(d => d.answer === null && open.has(d.issue))
+  const pending = all.filter(d => d.answer === null && !d.superseded && open.has(d.issue))
     .sort((a, b) => (a.optional - b.optional) || (new Date(a.askedAt) - new Date(b.askedAt)));
   return { answered, pending };
 }

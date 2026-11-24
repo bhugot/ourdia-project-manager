@@ -52,3 +52,18 @@ test('pending only lists questions of open issues', () => {
   ]);
   assert.deepEqual(all.pending.map(x => `${x.issue}-${x.n}`), ['2-2']);
 });
+
+test('a question left unanswered before a newer series is no longer pending', () => {
+  const ASK_OLD = '## En attente de Ben\n### Q6 — Paires à l\'aveugle\n- **A.** Oui\n- **B.** Non\n### Q7 — Ordre des paires\n- **A.** Fixe\n- **B.** Tiré au sort\n';
+  const ASK_NEW = '## En attente de Ben\n### Q8 — Nombre de paires\n- **A.** Six\n### Q9 — Durée\n- **A.** Courte\n';
+  const d = issue(74, [
+    c(ASK_OLD, '2026-11-24T12:19:00Z'), c('Réponses données en conversation.', '2026-11-24T13:00:00Z'),
+    c(ASK_NEW, '2026-11-24T15:00:00Z'), c('Q8 : A\nQ9 : A', '2026-11-24T16:00:00Z'),
+  ]);
+  const all = allDecisions([d]);
+  assert.deepEqual(all.pending, []);
+  assert.deepEqual(all.answered.map(x => x.n), [8, 9]);
+  assert.deepEqual(decisionsOf(d).filter(x => x.superseded).map(x => x.n), [6, 7]);
+  const waiting = allDecisions([issue(75, [c(ASK_OLD, '2026-11-24T12:19:00Z'), c(ASK_NEW, '2026-11-24T15:00:00Z')])]);
+  assert.deepEqual(waiting.pending.map(x => x.n), [8, 9]);
+});
