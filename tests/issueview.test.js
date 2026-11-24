@@ -20,7 +20,7 @@ function ctxFor(issue, extra = {}) {
   const doc = fakeDocument();
   return { doc, now: new Date(), demo: false, home: '#/', loadedAt: null, board: { issues: [issue], refs: new Map(), warnings: [] },
     issueHref: n => `#/issue/${n}`, refresh() {}, loadComments() {}, confirm: () => true,
-    sendAnswers: async () => {}, setStandby: async () => {}, ...extra };
+    sendAnswers: async () => {}, setStandby: async () => {}, drafts: new Map(), ...extra };
 }
 const openIssue = (labels, comments = []) => ({ number: 12, title: 'T', body: '', state: 'OPEN', labels, assignees: [],
   comments, commentsComplete: true, parent: null, subIssues: [] });
@@ -37,4 +37,16 @@ test('stand-by button toggles its label', () => {
   const labelOf = labels => { const ctx = ctxFor(openIssue(labels)); issueView(ctx, 12); return ctx.doc.created.filter(e => e.tagName === 'BUTTON').map(e => text(e)); };
   assert.ok(labelOf([]).includes('Mettre en stand-by'));
   assert.ok(labelOf(['stand-by']).includes('Reprendre'));
+});
+
+test('a draft survives a re-render after a failed send', () => {
+  const issue = openIssue(['attente-ben'], [{ body: ASK2, createdAt: '2026-11-23T10:00:00Z' }]);
+  const drafts = new Map([[12, new Map([[1, { n: 1, letter: 'B', note: 'deux' }]])]]);
+  const ctx = ctxFor(issue, { drafts });
+  issueView(ctx, 12);
+  const pressed = ctx.doc.created.filter(e => e.tagName === 'BUTTON' && e.attributes['aria-pressed'] === 'true').map(e => text(e));
+  assert.deepEqual(pressed, ['B']);
+  const send = ctx.doc.created.find(e => e.tagName === 'BUTTON' && text(e) === 'Envoyer les réponses');
+  assert.equal(send.disabled, false);
+  assert.ok(ctx.doc.created.some(e => e.tagName === 'INPUT' && e.value === 'deux'));
 });

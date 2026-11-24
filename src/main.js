@@ -7,17 +7,19 @@ import { listView } from './views/list.js';
 import { issueView } from './views/issue.js';
 import { settingsView } from './views/settings.js';
 import { synthesisView } from './views/synthesis.js';
+import { sinceFrom } from './visit.js';
 
 const TOKEN_KEY = 'opm.token';
 const VISIT_KEY = 'opm.lastVisit';
-const DAY = 24 * 3600 * 1000;
 const doc = document;
 const app = doc.getElementById('app');
 
-// The previous visit is read once when the app opens and stays fixed while it is open.
-const previousVisit = Number(localStorage.getItem(VISIT_KEY));
-const since = new Date(previousVisit && Date.now() - previousVisit < 30 * DAY ? previousVisit : Date.now() - DAY);
-localStorage.setItem(VISIT_KEY, String(Date.now()));
+// The previous visit is read once when the app opens and stays fixed while it is open; it is
+// only replaced once a real (non-demo) summary has been shown.
+const since = sinceFrom(localStorage.getItem(VISIT_KEY), Date.now());
+const openedAt = Date.now();
+let visitRecorded = false;
+const drafts = new Map(); // answers being typed, per issue, kept across re-renders
 
 let board = null;       // last loaded board (real or demo)
 let boardIsDemo = false;
@@ -94,9 +96,10 @@ function context(r) {
     refresh: async () => { writeError = null; if (r.demo) board = null; await load(r.demo); render(); },
     saveToken: value => { localStorage.setItem(TOKEN_KEY, value); authError = false; board = null; location.hash = '#/'; },
     forgetToken: () => { localStorage.removeItem(TOKEN_KEY); board = null; render(); },
+    drafts,
     sendAnswers: (issue, body) => write(r,
       () => issue.comments.push({ body, createdAt: new Date().toISOString() }),
-      t => postComment(t, issue.number, body)),
+      t => postComment(t, issue.number, body)).then(() => { if (!writeError) drafts.delete(issue.number); }),
     setStandby: (issue, on) => write(r,
       () => { issue.labels = on ? [...issue.labels, STANDBY_LABEL] : issue.labels.filter(l => l !== STANDBY_LABEL); },
       t => (on ? addLabel(t, issue.number, STANDBY_LABEL) : removeLabel(t, issue.number, STANDBY_LABEL))),
@@ -136,6 +139,10 @@ function render() {
   else if (!board) view = message('Chargement…');
   else view = r.name === 'issue' ? issueView(context(r), r.number) : VIEWS[r.name](context(r));
   app.replaceChildren(view);
+  if (r.name === 'synthesis' && !r.demo && board && !boardIsDemo && !visitRecorded) {
+    localStorage.setItem(VISIT_KEY, String(openedAt));
+    visitRecorded = true;
+  }
 }
 
 async function navigate() {

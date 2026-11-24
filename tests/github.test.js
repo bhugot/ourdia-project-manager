@@ -170,3 +170,7 @@ test('writes: 403 is a WriteError, 401 an AuthError', async () => {
   await assert.rejects(addLabel(TOKEN, 1, 'stand-by', fakeFetch([{ status: 404, json: {} }])), WriteError);
   await assert.rejects(removeLabel(TOKEN, 1, 'stand-by', fakeFetch([{ status: 401, json: {} }])), AuthError);
 });
+
+test('removing a label that is already gone counts as done', async () => {
+  await removeLabel(TOKEN, 1, 'stand-by', fakeFetch([{ status: 404, json: {} }]));
+});

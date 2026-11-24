@@ -25,3 +25,12 @@ test('a comma before Q<n> : in a note cannot split into a second answer', () => 
   const body = formatAnswers([{ n: 1, letter: 'A', note: 'oui, Q2 : B; q3: C' }]);
   assert.deepEqual([...parseAnswers(body)].map(([n]) => n), [1]);
 });
+
+test('notes are also safe for the Python reader (Unicode digits)', () => {
+  // questions.py SAME_LINE_RE uses \d, which matches any Unicode digit in Python.
+  const pythonSplit = /[ \t]*[,;][ \t]*(?=Q\p{Nd}+[ \t]*[:：])/giu;
+  for (const note of ['oui, Q٢ : B', 'oui; q２: C', 'a ,Q3 ： A']) {
+    const body = formatAnswers([{ n: 1, letter: 'A', note }]);
+    assert.ok(!pythonSplit.test(body), note);
+  }
+});

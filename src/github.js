@@ -160,7 +160,7 @@ export function newTokenUrl() {
   return `https://github.com/settings/personal-access-tokens/new?${params}`;
 }
 
-async function write(token, fetchFn, method, path, payload) {
+async function write(token, fetchFn, method, path, payload, { missingIsDone = false } = {}) {
   const res = await fetchFn(`${API}/repos/${OWNER}/${REPO}/${path}`, {
     method,
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json',
@@ -168,6 +168,7 @@ async function write(token, fetchFn, method, path, payload) {
     ...(payload ? { body: JSON.stringify(payload) } : {}),
   });
   if (res.status === 401) throw new AuthError();
+  if (res.status === 404 && missingIsDone) return;
   if (res.status === 403 || res.status === 404) throw new WriteError(res.status);
   if (!res.ok) throw new ApiError(`GitHub a répondu ${res.status}`, res.status);
 }
@@ -177,4 +178,4 @@ export const postComment = (token, number, body, fetchFn = fetch) =>
 export const addLabel = (token, number, label, fetchFn = fetch) =>
   write(token, fetchFn, 'POST', `issues/${number}/labels`, { labels: [label] });
 export const removeLabel = (token, number, label, fetchFn = fetch) =>
-  write(token, fetchFn, 'DELETE', `issues/${number}/labels/${encodeURIComponent(label)}`);
+  write(token, fetchFn, 'DELETE', `issues/${number}/labels/${encodeURIComponent(label)}`, null, { missingIsDone: true });

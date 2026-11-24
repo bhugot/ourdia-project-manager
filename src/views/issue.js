@@ -20,7 +20,7 @@ function block(doc, title, ...content) {
 function answerInputs(ctx, q, entry, onChange) {
   const { doc } = ctx;
   const buttons = q.options.map(o => {
-    const b = h(doc, 'button', { type: 'button', class: 'letter', 'aria-pressed': 'false', 'aria-label': `${o.letter}. ${o.text}` }, o.letter);
+    const b = h(doc, 'button', { type: 'button', class: 'letter', 'aria-pressed': String(entry.letter === o.letter), 'aria-label': `${o.letter}. ${o.text}` }, o.letter);
     b.addEventListener('click', () => {
       entry.letter = entry.letter === o.letter ? null : o.letter;
       for (const [i, other] of buttons.entries()) other.setAttribute('aria-pressed', String(q.options[i].letter === entry.letter));
@@ -29,6 +29,7 @@ function answerInputs(ctx, q, entry, onChange) {
     return b;
   });
   const note = h(doc, 'input', { type: 'text', class: 'note-input', placeholder: 'commentaire (facultatif)', 'aria-label': `Commentaire pour Q${q.n}` });
+  note.value = entry.note;
   note.addEventListener('input', () => { entry.note = note.value; onChange(); });
   return h(doc, 'div', { class: 'answer-form' }, buttons.length ? h(doc, 'div', { class: 'letters' }, buttons) : null, note);
 }
@@ -38,6 +39,9 @@ function questions(ctx, issue) {
   const status = questionStatus(issue.comments);
   if (!status) return null;
   const canAnswer = issue.state === 'OPEN';
+  // Kept by main.js across re-renders, so a failed send does not lose what Ben typed.
+  if (!ctx.drafts.has(issue.number)) ctx.drafts.set(issue.number, new Map());
+  const draft = ctx.drafts.get(issue.number);
   const entries = [];
   const send = h(doc, 'button', { type: 'button', class: 'primary', disabled: true }, 'Envoyer les réponses');
   const refreshSend = () => { send.disabled = !formatAnswers(entries); };
@@ -52,7 +56,8 @@ function questions(ctx, issue) {
     const answer = status.answers.get(q.n);
     let form = null;
     if (!answer && canAnswer) {
-      const entry = { n: q.n, letter: null, note: '' };
+      if (!draft.has(q.n)) draft.set(q.n, { n: q.n, letter: null, note: '' });
+      const entry = draft.get(q.n);
       entries.push(entry);
       form = answerInputs(ctx, q, entry, refreshSend);
     }
@@ -62,6 +67,7 @@ function questions(ctx, issue) {
       h(doc, 'p', { class: 'answer' }, answer ? `Réponse : ${answer}` : 'sans réponse'),
       form);
   });
+  refreshSend();
   return block(doc, 'Questions', h(doc, 'ol', { class: 'questions' }, items),
     entries.length ? h(doc, 'div', { class: 'actions' }, send) : null);
 }

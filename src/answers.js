@@ -6,7 +6,7 @@ export const ANSWERS_HEADING = '## Réponses de Ben';
 /** A free note on one line, unable to start or split into another `Q<n> :` answer. */
 function cleanNote(note) {
   return (note || '').split(/\s+/).filter(Boolean).join(' ')
-    .replace(/[,;](?=\s*Q\d+\s*[:：])/gi, ' /');
+    .replace(/[,;](?=\s*Q\p{Nd}+\s*[:：])/giu, ' /'); // \p{Nd}: Python's \d matches every Unicode digit
 }
 
 /** Comment body for the filled entries [{n, letter, note}], or null when nothing is filled. */
