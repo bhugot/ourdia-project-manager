@@ -74,7 +74,8 @@ test('a question is a card with its context and its recommended option', () => {
   assert.match(out, /Change le rythme\./);
   const rec = ctx.doc.created.filter(e => e.attributes.class === 'option recommended').map(text);
   assert.deepEqual(rec, ['A. Trois recommandée', 'B. Long recommandée']);
-  assert.ok(!/\(recommandé\)/.test(out));
+  const cards = text(ctx.doc.created.find(e => e.attributes.class === 'questions'));
+  assert.ok(!/\(recommandé\)/.test(cards)); // the raw comment below still shows it
   const letters = ctx.doc.created.filter(e => e.attributes.class === 'letter').map(text);
   assert.deepEqual(letters, ['★ A', 'B', 'A', 'B', 'A', '★ B']);
 });
