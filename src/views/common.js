@@ -2,6 +2,7 @@
 import { h } from '../dom.js';
 import { dayTime, longDate } from '../format.js';
 import { parseExpiry } from '../github.js';
+import { allDecisions } from '../decisions.js';
 
 const EXPIRY_WARNING = 14 * 24 * 3600 * 1000;
 const EDIT_TOKENS_URL = 'https://github.com/settings/personal-access-tokens';
@@ -10,11 +11,16 @@ export function header(ctx, { back = false } = {}) {
   const { doc } = ctx;
   const refresh = h(doc, 'button', { type: 'button', class: 'refresh', 'aria-label': 'Rafraîchir', title: 'Rafraîchir' }, '↻');
   refresh.addEventListener('click', () => ctx.refresh());
-  const tab = (href, label, current) => h(doc, 'a', { href, class: current ? 'tab current' : 'tab', 'aria-current': current ? 'page' : false }, label);
+  const tab = (href, label, current, count = 0) => h(doc, 'a', { href, class: current ? 'tab current' : 'tab', 'aria-current': current ? 'page' : false,
+    'aria-label': count ? `${label}, ${count} ${count > 1 ? "questions t'attendent" : "question t'attend"}` : false },
+  label, count ? h(doc, 'span', { class: 'count' }, String(count)) : null);
+  // Required questions left without an answer (the « peut attendre » ones don't wait), as in the summary
+  // sentence and the icon badge. Pending questions only exist on open issues, all in the board.
+  const waiting = ctx.board ? allDecisions(ctx.board.issues).pending.filter(d => !d.optional).length : 0;
   return h(doc, 'header', { class: 'top' },
     back ? h(doc, 'a', { class: 'back', href: ctx.home }, '← Retour') : h(doc, 'nav', { class: 'tabs' },
       tab(ctx.home, 'Synthèse', ctx.route === 'synthesis'), tab(ctx.listHref, 'Liste', ctx.route === 'list'),
-      tab(ctx.decisionsHref, 'Décisions', ctx.route === 'decisions')),
+      tab(ctx.decisionsHref, 'Décisions', ctx.route === 'decisions', waiting)),
     h(doc, 'span', { class: 'stamp' }, ctx.loadedAt ? `lu à ${dayTime(ctx.loadedAt).split(' ')[1]}` : ''),
     refresh,
     h(doc, 'a', { class: 'settings-link', href: '#/settings', 'aria-label': 'Réglages' }, '⚙'));
