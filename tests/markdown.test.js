@@ -62,6 +62,6 @@ test('render uses allowed elements and safe attributes only', () => {
   assert.deepEqual(input.attributes, { type: 'checkbox', disabled: '', checked: '' });
   const [ext, internal] = doc.created.filter(e => e.tagName === 'A');
   assert.deepEqual(ext.attributes, { href: 'https://x.y/', rel: 'noopener noreferrer', target: '_blank' });
-  assert.deepEqual(internal.attributes, { href: '#/issue/4' });
+  assert.deepEqual(internal.attributes, { href: '#/issue/4', class: 'issue-ref' });
   for (const el of doc.created) for (const k of Object.keys(el.attributes)) assert.ok(!/^on|style/i.test(k));
 });

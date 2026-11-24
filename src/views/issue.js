@@ -8,6 +8,7 @@ import { progressOf } from '../progress.js';
 import { dependencies } from '../deps.js';
 import { dayTime } from '../format.js';
 import { banners, header } from './common.js';
+import { attachPreview } from './preview.js';
 import { formatAnswers } from '../answers.js';
 import { answerText } from '../decisions.js';
 import { STANDBY_LABEL } from '../classify.js';
@@ -217,7 +218,7 @@ export function issueView(ctx, number) {
       h(doc, 'p', null, `L'issue #${number} n'est pas dans la liste chargée (ouvertes et fermées récentes). `,
         h(doc, 'a', { href: GITHUB_ISSUE(number), rel: 'noopener noreferrer', target: '_blank' }, 'Ouvrir dans GitHub ↗')));
   }
-  return h(doc, 'div', { class: 'view view-issue' },
+  const view = h(doc, 'div', { class: 'view view-issue' },
     header(ctx, { back: true }),
     banners(ctx),
     h(doc, 'h1', { class: 'issue-title' }, h(doc, 'span', { class: 'num' }, `#${issue.number} `), issue.title),
@@ -232,4 +233,6 @@ export function issueView(ctx, number) {
     deps(ctx, issue),
     block(doc, 'Description', readable(ctx, issue.body, 'd')),
     notes(ctx, issue));
+  attachPreview(ctx, view);
+  return view;
 }

@@ -168,3 +168,13 @@ details.long > summary, details.note.old > summary { cursor: pointer; color: var
 details.note.old > summary { color: var(--fg); }
 details.note.old > summary .when { color: var(--muted); font-size: .85rem; }
 .md h2, .md h3 { scroll-margin-top: 72px; }
+
+/* Jalon 3 : aperçu des issues citées */
+.preview { position: fixed; left: 12px; right: 12px; bottom: 12px; max-width: 696px; margin: 0 auto; z-index: 2;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+.preview p { margin: 0 0 4px; }
+.preview-title { font-weight: 600; }
+.preview-title .num, .preview-meta { color: var(--muted); }
+.preview-meta { font-size: .88rem; }
+a.button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: 10px; text-decoration: none; border: 1px solid var(--line); }
+a.button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }

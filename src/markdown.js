@@ -275,6 +275,7 @@ function renderInline(node, doc, issueHref) {
     case 'issue': {
       const a = doc.createElement('a');
       a.setAttribute('href', issueHref(node.number));
+      a.setAttribute('class', 'issue-ref');
       a.appendChild(doc.createTextNode(`#${node.number}`));
       return a;
     }

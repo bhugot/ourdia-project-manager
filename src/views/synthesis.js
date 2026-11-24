@@ -4,6 +4,7 @@ import { renderMarkdown } from '../markdown.js';
 import { summarize } from '../synthesis.js';
 import { dayTime } from '../format.js';
 import { banners, header } from './common.js';
+import { attachPreview } from './preview.js';
 
 const REPORT_LIMIT = 400;
 const SECTION_NAMES = { waiting: 'À trancher', blocked: 'Bloqué', running: 'En cours', done: 'Fini' };
@@ -29,7 +30,7 @@ function report(ctx, r) {
 export function synthesisView(ctx) {
   const { doc } = ctx;
   const { lines, reports } = summarize(ctx.board, ctx.sections, { since: ctx.since, now: ctx.now });
-  return h(doc, 'div', { class: 'view view-synthesis' },
+  const view = h(doc, 'div', { class: 'view view-synthesis' },
     header(ctx),
     banners(ctx),
     h(doc, 'section', { class: 'summary' },
@@ -38,4 +39,6 @@ export function synthesisView(ctx) {
     h(doc, 'section', { class: 'reports' },
       h(doc, 'h2', null, 'Comptes rendus'),
       reports.length ? reports.map(r => report(ctx, r)) : h(doc, 'p', { class: 'muted' }, 'aucun')));
+  attachPreview(ctx, view);
+  return view;
 }

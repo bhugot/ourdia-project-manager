@@ -2,6 +2,7 @@
 export function fakeDocument() {
   const created = [];
   const node = (props) => ({ ...props, children: [], appendChild(child) { this.children.push(child); return child; },
+    removeChild(child) { this.children = this.children.filter(c => c !== child); return child; },
     append(...kids) { for (const k of kids) this.children.push(typeof k === 'string' ? doc.createTextNode(k) : k); } });
   const doc = {
     created,
