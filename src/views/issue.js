@@ -46,6 +46,7 @@ function questions(ctx, issue) {
   const send = h(doc, 'button', { type: 'button', class: 'primary', disabled: true }, 'Envoyer les réponses');
   const refreshSend = () => { send.disabled = !formatAnswers(entries); };
   send.addEventListener('click', async () => {
+    if (send.disabled) return; // a second tap while the first one is being sent
     const body = formatAnswers(entries);
     if (!body || !ctx.confirm(`Poster ce commentaire sur #${issue.number} ?\n\n${body}`)) return;
     send.disabled = true;

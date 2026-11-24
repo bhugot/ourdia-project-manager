@@ -8,7 +8,8 @@ export function fakeDocument() {
     createElement(tag) {
       const el = node({ nodeType: 1, tagName: tag.toUpperCase(), attributes: {} });
       el.setAttribute = (k, v) => { el.attributes[k] = String(v); };
-      el.addEventListener = () => {};
+      el.listeners = {};
+      el.addEventListener = (type, fn) => { (el.listeners[type] ||= []).push(fn); };
       Object.defineProperty(el, 'textContent', { get: () => text(el), set: v => { el.children = [doc.createTextNode(v)]; } });
       created.push(el);
       return el;
@@ -19,3 +20,6 @@ export function fakeDocument() {
   return doc;
 }
 export function text(n) { return n.nodeType === 3 ? n.data : n.children.map(text).join(''); }
+
+/** Runs the listeners of one event, like a user action would. */
+export async function fire(el, type) { for (const fn of el.listeners[type] || []) await fn({ target: el }); }

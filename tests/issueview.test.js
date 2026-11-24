@@ -50,3 +50,18 @@ test('a draft survives a re-render after a failed send', () => {
   assert.equal(send.disabled, false);
   assert.ok(ctx.doc.created.some(e => e.tagName === 'INPUT' && e.value === 'deux'));
 });
+
+test('a double tap on send posts once', async () => {
+  const { fire } = await import('./fakedom.js');
+  let sent = 0;
+  const ctx = ctxFor(openIssue(['attente-ben'], [{ body: ASK2, createdAt: '2026-11-23T10:00:00Z' }]),
+    { sendAnswers: () => { sent++; return new Promise(() => {}); } });
+  issueView(ctx, 12);
+  const buttons = ctx.doc.created.filter(e => e.tagName === 'BUTTON');
+  await fire(buttons.find(b => text(b) === 'A'), 'click');
+  const send = buttons.find(b => text(b) === 'Envoyer les réponses');
+  fire(send, 'click');
+  fire(send, 'click');
+  await new Promise(r => setTimeout(r, 0));
+  assert.equal(sent, 1);
+});

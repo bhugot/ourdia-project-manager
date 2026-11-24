@@ -1,5 +1,7 @@
 // Entry point: routing by hash, loading, writing, rendering.
-import { AuthError, WriteError, addLabel, loadBoard, loadComments, postComment, removeLabel } from './github.js';
+import { AuthError, addLabel, loadBoard, loadComments, postComment, removeLabel } from './github.js';
+import { parseRoute } from './routes.js';
+import { runWrite } from './write.js';
 import { STANDBY_LABEL, classify } from './classify.js';
 import { demoBoard } from './demo.js';
 import { h } from './dom.js';
@@ -31,15 +33,7 @@ let writeError = null;
 
 const token = () => localStorage.getItem(TOKEN_KEY);
 
-function route() {
-  const hash = location.hash || '#/';
-  if (hash === '#/settings') return { name: 'settings', demo: false };
-  const demo = hash.startsWith('#/demo');
-  const path = (demo ? hash.slice('#/demo'.length) : hash.slice(1)) || '/';
-  const issue = path.match(/^\/issue\/(\d+)$/);
-  if (issue) return { name: 'issue', number: Number(issue[1]), demo };
-  return { name: path === '/list' ? 'list' : 'synthesis', demo };
-}
+const route = () => parseRoute(location.hash);
 
 async function load(demo) {
   error = null;
@@ -64,22 +58,12 @@ async function load(demo) {
   }
 }
 
-/** Runs one write, then reloads; errors become a banner (or the settings screen on 401). */
+/** Runs one write; errors become a banner, a refused token sends to the settings. */
 async function write(r, demoChange, realWrite) {
   writeError = null;
-  if (r.demo) {
-    demoChange();
-  } else {
-    try {
-      await realWrite(token());
-    } catch (e) {
-      if (e instanceof AuthError) { authError = true; location.hash = '#/settings'; return; }
-      writeError = e instanceof WriteError ? `${e.message} (GitHub a répondu ${e.status}).` : `Envoi impossible : ${e.message}`;
-      render();
-      return;
-    }
-    await load(false);
-  }
+  const result = await runWrite({ demo: r.demo, demoChange, realWrite: () => realWrite(token()), reload: () => load(false) });
+  if (result.auth) { authError = true; location.hash = '#/settings'; return; }
+  writeError = result.error;
   render();
 }
 
