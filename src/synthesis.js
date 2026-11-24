@@ -1,6 +1,7 @@
 // The opening summary: a few computed sentences on what changed since the last visit, then the
 // last report written by each active or recently finished issue's session. No model involved.
 import { questionStatus } from './questions.js';
+import { STANDBY_LABEL } from './classify.js';
 
 const HOUR = 3600 * 1000;
 const REPORT_SECTIONS = ['waiting', 'blocked', 'running', 'done'];
@@ -57,7 +58,8 @@ export function summarize(board, sections, { since, now }) {
   }
 
   const finished = board.issues
-    .filter(i => i.state === 'CLOSED' && i.closedAt && new Date(i.closedAt) > since && !i.labels.includes('tableau-de-bord'))
+    .filter(i => i.state === 'CLOSED' && i.closedAt && new Date(i.closedAt) > since
+      && !i.labels.includes('tableau-de-bord') && !i.labels.includes(STANDBY_LABEL))
     .sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
   if (finished.length) {
     lines.push(sentence(`${plural(finished.length, 'Finie', 'Finies')} depuis ta dernière visite : `, finished.map(i => ({ issue: i.number }))));
@@ -71,7 +73,8 @@ export function summarize(board, sections, { since, now }) {
   }
   if (sections.pc.idle) lines.push([`PC inactif depuis ${hoursSince(now, sections.pc.date)} h`]);
 
-  const reports = REPORT_SECTIONS.flatMap(section => sections[section].map(card => {
+  const reports = REPORT_SECTIONS.flatMap(section => sections[section]
+    .filter(card => !byNumber.get(card.number).labels.includes(STANDBY_LABEL)).map(card => {
     const issue = byNumber.get(card.number);
     const last = issue.comments.at(-1);
     const when = last?.createdAt || issue.closedAt || issue.updatedAt;

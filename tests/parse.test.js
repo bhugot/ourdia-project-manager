@@ -35,3 +35,7 @@ test('short collapses spaces and cuts with an ellipsis', () => {
   assert.equal(short('  a \n b  '), 'a b');
   assert.equal(short('abcdef', 4), 'abc…');
 });
+
+test('parseAfter is case-sensitive like common.py', () => {
+  assert.deepEqual(parseAfter('Apres: #5\nAPRES: #6\napres: #7'), [7]);
+});

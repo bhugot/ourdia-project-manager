@@ -72,3 +72,7 @@ test('reports: last comment of active and finished issues, fresh after the last 
     [12, 'waiting', false, '## En a'], [20, 'running', true, 'Point :'], [1, 'done', true, ''],
   ]);
 });
+
+test('a closed stand-by issue is not listed as finished', () => {
+  assert.deepEqual(lines(run([mk(1, ['stand-by'], { closedAt: ago({ hours: 1 }) })])), ['Rien de nouveau depuis ta dernière visite.']);
+});

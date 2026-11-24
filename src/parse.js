@@ -1,6 +1,6 @@
 // Reading issue bodies and comments: dependencies, session links, mentions, "Fini quand".
 
-const AFTER_LINE_RE = /^\s*apres:(.*)$/gim;
+const AFTER_LINE_RE = /^\s*apres:(.*)$/gm; // case-sensitive, like common.py
 const SESSION_RE = /https:\/\/claude\.ai\/code\/session_[A-Za-z0-9]+/g;
 const MENTION_RE = /(?<![\w#&/])#(\d+)\b/g;
 
@@ -30,7 +30,7 @@ export function mentions(text) {
   const prose = (text || '')
     .replace(/^```[\s\S]*?^```/gm, '')
     .replace(/`[^`\n]*`/g, '')
-    .replace(/^\s*apres:.*$/gim, '');
+    .replace(/^\s*apres:.*$/gm, '');
   return unique([...prose.matchAll(MENTION_RE)].map(m => Number(m[1])));
 }
 
