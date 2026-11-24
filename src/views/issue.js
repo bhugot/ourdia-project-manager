@@ -7,6 +7,7 @@ import { dependencies } from '../deps.js';
 import { dayTime } from '../format.js';
 import { banners, header } from './common.js';
 import { formatAnswers } from '../answers.js';
+import { answerText } from '../decisions.js';
 import { STANDBY_LABEL } from '../classify.js';
 
 const GITHUB_ISSUE = n => `https://github.com/bhugot/ourdia/issues/${n}`;
@@ -20,18 +21,25 @@ function block(doc, title, ...content) {
 function answerInputs(ctx, q, entry, onChange) {
   const { doc } = ctx;
   const buttons = q.options.map(o => {
-    const b = h(doc, 'button', { type: 'button', class: 'letter', 'aria-pressed': String(entry.letter === o.letter), 'aria-label': `${o.letter}. ${o.text}` }, o.letter);
+    const b = h(doc, 'button', { type: 'button', class: 'letter', 'aria-pressed': String(entry.letter === o.letter),
+      'aria-label': `${o.letter}. ${o.label}${o.recommended ? ' (recommandée)' : ''}` }, o.recommended ? `★ ${o.letter}` : o.letter);
     b.addEventListener('click', () => {
       entry.letter = entry.letter === o.letter ? null : o.letter;
-      for (const [i, other] of buttons.entries()) other.setAttribute('aria-pressed', String(q.options[i].letter === entry.letter));
+      sync();
       onChange();
     });
     return b;
   });
+  const sync = () => { for (const [i, b] of buttons.entries()) b.setAttribute('aria-pressed', String(q.options[i].letter === entry.letter)); };
   const note = h(doc, 'input', { type: 'text', class: 'note-input', placeholder: 'commentaire (facultatif)', 'aria-label': `Commentaire pour Q${q.n}` });
   note.value = entry.note;
   note.addEventListener('input', () => { entry.note = note.value; onChange(); });
-  return h(doc, 'div', { class: 'answer-form' }, buttons.length ? h(doc, 'div', { class: 'letters' }, buttons) : null, note);
+  return { el: h(doc, 'div', { class: 'answer-form' }, buttons.length ? h(doc, 'div', { class: 'letters' }, buttons) : null, note), sync };
+}
+
+function optionItem(doc, o) {
+  return h(doc, 'li', { class: o.recommended ? 'option recommended' : 'option' },
+    h(doc, 'strong', null, `${o.letter}. `), o.label, o.recommended ? h(doc, 'span', { class: 'rec-tag' }, ' recommandée') : null);
 }
 
 function questions(ctx, issue) {
@@ -43,12 +51,15 @@ function questions(ctx, issue) {
   if (!ctx.drafts.has(issue.number)) ctx.drafts.set(issue.number, new Map());
   const draft = ctx.drafts.get(issue.number);
   const entries = [];
+  const followable = []; // [entry, recommended letter, sync] of unanswered questions with a recommendation
   const send = h(doc, 'button', { type: 'button', class: 'primary', disabled: true }, 'Envoyer les réponses');
   const refreshSend = () => { send.disabled = !formatAnswers(entries); };
   send.addEventListener('click', async () => {
     if (send.disabled) return; // a second tap while the first one is being sent
     const body = formatAnswers(entries);
-    if (!body || !ctx.confirm(`Poster ce commentaire sur #${issue.number} ?\n\n${body}`)) return;
+    if (!body || !ctx.confirm(`Poster ce commentaire sur #${issue.number} ?
+
+${body}`)) return;
     send.disabled = true;
     send.textContent = 'Envoi…';
     await ctx.sendAnswers(issue, body);
@@ -60,16 +71,30 @@ function questions(ctx, issue) {
       if (!draft.has(q.n)) draft.set(q.n, { n: q.n, letter: null, note: '' });
       const entry = draft.get(q.n);
       entries.push(entry);
-      form = answerInputs(ctx, q, entry, refreshSend);
+      const inputs = answerInputs(ctx, q, entry, refreshSend);
+      form = inputs.el;
+      const rec = q.options.find(o => o.recommended);
+      if (rec) followable.push([entry, rec.letter, inputs.sync]);
     }
     return h(doc, 'li', { class: answer ? 'question answered' : 'question' },
-      h(doc, 'p', { class: 'q-title' }, `Q${q.n} — ${q.title}`, q.optional ? h(doc, 'span', { class: 'muted' }, ' (peut attendre)') : null),
-      q.options.length ? h(doc, 'ul', { class: 'options' }, q.options.map(o => h(doc, 'li', null, h(doc, 'strong', null, `${o.letter}. `), o.text))) : null,
-      h(doc, 'p', { class: 'answer' }, answer ? `Réponse : ${answer}` : 'sans réponse'),
+      h(doc, 'p', { class: 'q-title' }, `Q${q.n} — ${q.title}`, q.optional ? h(doc, 'span', { class: 'optional-tag' }, 'peut attendre') : null),
+      answer ? null : (q.context ? h(doc, 'div', { class: 'md q-context' }, renderMarkdown(q.context, doc, { issueHref: ctx.issueHref })) : null),
+      answer ? null : (q.options.length ? h(doc, 'ul', { class: 'options' }, q.options.map(o => optionItem(doc, o))) : null),
+      h(doc, 'p', { class: 'answer' }, answer ? `Réponse : ${answerText(q, answer)}` : 'sans réponse'),
       form);
   });
   refreshSend();
-  return block(doc, 'Questions', h(doc, 'ol', { class: 'questions' }, items),
+  let follow = null;
+  if (followable.length) {
+    follow = h(doc, 'button', { type: 'button' }, 'Suivre les recommandations');
+    follow.addEventListener('click', () => {
+      for (const [entry, letter, sync] of followable) { entry.letter = letter; sync(); }
+      refreshSend();
+    });
+  }
+  return block(doc, 'Questions',
+    follow ? h(doc, 'div', { class: 'actions follow' }, follow, h(doc, 'span', { class: 'muted' }, 'coche, sans envoyer')) : null,
+    h(doc, 'ol', { class: 'questions' }, items),
     entries.length ? h(doc, 'div', { class: 'actions' }, send) : null);
 }
 

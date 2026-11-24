@@ -137,3 +137,13 @@ button:disabled { opacity: .5; }
   .top .stamp { font-size: .72rem; }
 }
 .refresh { min-width: 44px; padding: 0 10px; font-size: 1.2rem; }
+
+/* Jalon 3 : cartes de décision */
+.question .q-context { color: var(--muted); font-size: .95rem; }
+.question .q-context p { margin: .3em 0; }
+.options { list-style: none; padding-left: 0; display: grid; gap: 4px; }
+.option { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); }
+.option.recommended { border-color: var(--running); border-left-width: 4px; }
+.rec-tag { color: var(--running); font-size: .8rem; font-weight: 600; }
+.optional-tag { margin-left: 8px; font-size: .75rem; font-weight: normal; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+.follow { align-items: center; margin: 0 0 8px; }

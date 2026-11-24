@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { issueView } from '../src/views/issue.js';
-import { fakeDocument, text } from './fakedom.js';
+import { fakeDocument, fire, text } from './fakedom.js';
 
 test('failed comment load is shown as an error, not as complete', () => {
   const doc = fakeDocument();
@@ -64,4 +64,40 @@ test('a double tap on send posts once', async () => {
   fire(send, 'click');
   await new Promise(r => setTimeout(r, 0));
   assert.equal(sent, 1);
+});
+
+const ASK_REC = '## En attente de Ben\n### Q1 — Taille\nChange le rythme.\n\n- **A.** Trois (recommandé)\n- **B.** Autre (préciser)\n### Q2 — Nom\n- **A.** Brume\n- **B.** Autre (préciser)\n### Q3 — Hiver\n- **A.** Court\n- **B.** Long (recommandé)\n';
+
+test('a question is a card with its context and its recommended option', () => {
+  const ctx = ctxFor(openIssue(['attente-ben'], [{ body: ASK_REC, createdAt: '2026-11-23T10:00:00Z' }]));
+  const out = text(issueView(ctx, 12));
+  assert.match(out, /Change le rythme\./);
+  const rec = ctx.doc.created.filter(e => e.attributes.class === 'option recommended').map(text);
+  assert.deepEqual(rec, ['A. Trois recommandée', 'B. Long recommandée']);
+  assert.ok(!/\(recommandé\)/.test(out));
+  const letters = ctx.doc.created.filter(e => e.attributes.class === 'letter').map(text);
+  assert.deepEqual(letters, ['★ A', 'B', 'A', 'B', 'A', '★ B']);
+});
+
+test('follow the recommendations fills the unanswered questions only, and sends nothing', async () => {
+  let sent = 0;
+  const ctx = ctxFor(openIssue(['attente-ben'], [{ body: ASK_REC, createdAt: '2026-11-23T10:00:00Z' }, { body: 'Q3 : A', createdAt: '2026-11-23T11:00:00Z' }]),
+    { sendAnswers: async () => { sent++; } });
+  issueView(ctx, 12);
+  const follow = ctx.doc.created.find(e => e.tagName === 'BUTTON' && text(e) === 'Suivre les recommandations');
+  await fire(follow, 'click');
+  assert.equal(sent, 0);
+  const draft = ctx.drafts.get(12);
+  assert.deepEqual([...draft.values()].map(e => [e.n, e.letter]), [[1, 'A'], [2, null]]);
+  const pressed = ctx.doc.created.filter(e => e.attributes.class === 'letter' && e.attributes['aria-pressed'] === 'true').map(text);
+  assert.deepEqual(pressed, ['★ A']);
+  const send = ctx.doc.created.find(e => e.tagName === 'BUTTON' && text(e) === 'Envoyer les réponses');
+  assert.equal(send.disabled, false);
+  assert.match(text(issueView(ctx, 12)), /Réponse : A\. Court/);
+});
+
+test('no follow button without a recommendation left to take', () => {
+  const ctx = ctxFor(openIssue(['attente-ben'], [{ body: ASK2, createdAt: '2026-11-23T10:00:00Z' }]));
+  issueView(ctx, 12);
+  assert.ok(!ctx.doc.created.some(e => e.tagName === 'BUTTON' && text(e) === 'Suivre les recommandations'));
 });
