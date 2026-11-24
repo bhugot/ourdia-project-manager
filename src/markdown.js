@@ -190,10 +190,25 @@ function emphasis(src, i, prev) {
 
 // ---- DOM
 
-export function renderMarkdown(src, doc, { issueHref }) {
+/**
+ * DOM fragment of `src`. With `headingIds`, top-level headings get the id `<headingIds>-<i>`, i counting
+ * those headings in order (see outline() in reading.js).
+ */
+export function renderMarkdown(src, doc, { issueHref, headingIds = null }) {
   const frag = doc.createDocumentFragment();
-  for (const block of parseMarkdown(src)) frag.appendChild(renderBlock(block, doc, issueHref));
+  let heading = 0;
+  for (const block of parseMarkdown(src)) {
+    const el = renderBlock(block, doc, issueHref);
+    if (block.type === 'heading' && headingIds) el.setAttribute('id', `${headingIds}-${heading}`);
+    if (block.type === 'heading') heading += 1;
+    frag.appendChild(el);
+  }
   return frag;
+}
+
+/** Text of parsed inlines, without any markup. */
+export function inlineText(inlines) {
+  return inlines.map(n => (n.type === 'text' || n.type === 'code' ? n.text : n.type === 'issue' ? `#${n.number}` : inlineText(n.inlines))).join('');
 }
 
 function renderBlock(block, doc, issueHref) {

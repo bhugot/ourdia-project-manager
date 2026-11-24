@@ -119,3 +119,32 @@ test('the progress block sums up the issue at the top', () => {
   const bars = ctx.doc.created.filter(e => e.tagName === 'PROGRESS').map(e => [e.attributes.value, e.attributes.max]);
   assert.deepEqual(bars, [['1', '2'], ['1', '1']]);
 });
+
+const LONG = '## Compte rendu\n\nTout est fait.\n\n### Fait\n- a\n\n### Reste\n- b\n\nUn.\n\nDeux.';
+
+test('a long comment shows its lead, an outline and the rest folded', async () => {
+  const issue = openIssue([], [{ body: LONG, createdAt: '2026-11-23T10:00:00Z' }]);
+  const ctx = ctxFor(issue);
+  let scrolled = null;
+  ctx.doc.getElementById = id => ({ scrollIntoView() { scrolled = id; } });
+  issueView(ctx, 12);
+  const note = ctx.doc.created.find(e => e.attributes.class === 'note');
+  assert.match(text(note), /^.*Tout est fait\./);
+  const toc = ctx.doc.created.filter(e => e.attributes.class === 'toc-link');
+  assert.deepEqual(toc.map(text), ['Compte rendu', 'Fait', 'Reste']);
+  const fold = ctx.doc.created.find(e => e.tagName === 'DETAILS' && e.attributes.class === 'long');
+  assert.ok(fold && !('open' in fold.attributes));
+  await fire(toc[2], 'click');
+  assert.equal(fold.open, true);
+  assert.equal(scrolled, 'c0-2');
+});
+
+test('only the 3 most recent comments stay unfolded', () => {
+  const comments = [1, 2, 3, 4, 5].map(i => ({ body: `Point ${i}`, createdAt: `2026-11-2${i}T10:00:00Z` }));
+  const ctx = ctxFor(openIssue([], comments));
+  issueView(ctx, 12);
+  const old = ctx.doc.created.filter(e => e.tagName === 'DETAILS' && e.attributes.class === 'note old');
+  assert.deepEqual(old.map(e => text(e.children[0])), ['22/11 11:00 Point 2', '21/11 11:00 Point 1']);
+  const hrefs = ctx.doc.created.filter(e => e.tagName === 'A').map(e => e.attributes.href);
+  assert.ok(hrefs.every(h => /^(#\/|https?:)/.test(h)), hrefs.join(' '));
+});

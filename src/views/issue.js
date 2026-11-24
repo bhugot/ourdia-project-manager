@@ -2,7 +2,8 @@
 import { h } from '../dom.js';
 import { renderMarkdown } from '../markdown.js';
 import { questionStatus } from '../questions.js';
-import { sessionLinks } from '../parse.js';
+import { sessionLinks, short } from '../parse.js';
+import { isLong, lead, outline } from '../reading.js';
 import { progressOf } from '../progress.js';
 import { dependencies } from '../deps.js';
 import { dayTime } from '../format.js';
@@ -164,19 +165,48 @@ function deps(ctx, issue) {
   ])));
 }
 
+const UNFOLDED_NOTES = 3;
+
+/** Markdown of `body`; when long: its lead, an outline of its headings, and the full text folded. */
+function readable(ctx, body, prefix) {
+  const { doc } = ctx;
+  const full = h(doc, 'div', { class: 'md' }, renderMarkdown(body, doc, { issueHref: ctx.issueHref, headingIds: prefix }));
+  if (!isLong(body)) return full;
+  const fold = h(doc, 'details', { class: 'long' }, h(doc, 'summary', null, 'lire tout'), full);
+  const headings = outline(body);
+  const toc = headings.length >= 2 ? h(doc, 'nav', { class: 'toc', 'aria-label': 'Sommaire' }, headings.map(hd => {
+    const b = h(doc, 'button', { type: 'button', class: 'toc-link' }, hd.text);
+    if (hd.level === 3) b.setAttribute('aria-level', '3');
+    b.addEventListener('click', () => {
+      fold.open = true;
+      doc.getElementById(`${prefix}-${hd.index}`)?.scrollIntoView({ block: 'start' });
+    });
+    return b;
+  })) : null;
+  const first = lead(body);
+  return [first ? h(doc, 'p', { class: 'lead' }, first) : null, toc, fold];
+}
+
 function notes(ctx, issue) {
   const { doc } = ctx;
   if (issue.commentsError) {
-    return block(doc, 'Points d\'étape', h(doc, 'p', { class: 'banner warn' }, `Commentaires illisibles : ${issue.commentsError}`));
+    return block(doc, 'Points d’étape', h(doc, 'p', { class: 'banner warn' }, `Commentaires illisibles : ${issue.commentsError}`));
   }
   if (!issue.commentsComplete) {
     ctx.loadComments(issue);
-    return block(doc, 'Points d\'étape', h(doc, 'p', { class: 'muted' }, 'chargement…'));
+    return block(doc, 'Points d’étape', h(doc, 'p', { class: 'muted' }, 'chargement…'));
   }
-  if (!issue.comments.length) return block(doc, 'Points d\'étape', h(doc, 'p', { class: 'muted' }, 'aucun commentaire'));
-  return block(doc, `Points d'étape (${issue.comments.length})`, [...issue.comments].reverse().map(c =>
-    h(doc, 'article', { class: 'note' }, h(doc, 'p', { class: 'when' }, dayTime(c.createdAt)),
-      h(doc, 'div', { class: 'md' }, renderMarkdown(c.body, doc, { issueHref: ctx.issueHref })))));
+  if (!issue.comments.length) return block(doc, 'Points d’étape', h(doc, 'p', { class: 'muted' }, 'aucun commentaire'));
+  return block(doc, `Points d'étape (${issue.comments.length})`, [...issue.comments].reverse().map((c, i) => {
+    const prefix = `c${issue.comments.length - 1 - i}`;
+    if (i < UNFOLDED_NOTES) {
+      return h(doc, 'article', { class: 'note' }, h(doc, 'p', { class: 'when' }, dayTime(c.createdAt)), readable(ctx, c.body, prefix));
+    }
+    const firstLine = c.body.split('\n').map(l => l.replace(/^\s*#+\s*/, '').trim()).find(Boolean) || '';
+    return h(doc, 'details', { class: 'note old' },
+      h(doc, 'summary', null, h(doc, 'span', { class: 'when' }, dayTime(c.createdAt)), ` ${short(firstLine, 80)}`),
+      readable(ctx, c.body, prefix));
+  }));
 }
 
 export function issueView(ctx, number) {
@@ -200,6 +230,6 @@ export function issueView(ctx, number) {
     questions(ctx, issue),
     sessions(ctx, issue),
     deps(ctx, issue),
-    block(doc, 'Description', h(doc, 'div', { class: 'md' }, renderMarkdown(issue.body, doc, { issueHref: ctx.issueHref }))),
+    block(doc, 'Description', readable(ctx, issue.body, 'd')),
     notes(ctx, issue));
 }
